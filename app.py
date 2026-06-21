@@ -4,17 +4,35 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import find_peaks, savgol_filter
 from scipy.optimize import curve_fit
-from mpl_toolkits.mplot3d import Axes3D
+import os
+import urllib.request
+from matplotlib import font_manager
+import plotly.graph_objects as go
 
 # ================= 网页基础配置 =================
 st.set_page_config(page_title="超声波物理特征数字分析平台", layout="wide")
 st.title("🌊 超声波干涉与传播空间高级分析系统")
-st.markdown("上传纹影法拍摄的超声波干涉/传播图像，系统将自动进行波阵面提取、声速推算及 3D/FFT 高阶分析。")
+st.markdown("上传纹影法拍摄的超声波干涉/传播图像，系统将自动进行波阵面提取、声速推算及 **交互式 3D** / FFT 高阶分析。")
 
 # 侧边栏：参数设置
 st.sidebar.header("⚙️ 实验参数设置")
 real_diameter_mm = st.sidebar.number_input("凹面镜视场真实直径 (mm)", value=203.0, step=1.0)
 frequency_hz = st.sidebar.number_input("超声波发射频率 (Hz)", value=40000.0, step=100.0)
+
+# ================= 字体乱码终极修复 (强制云端加载中文字体) =================
+@st.cache_resource
+def load_chinese_font():
+    font_path = "SimHei.ttf"
+    # 如果服务器上没有这个字体，自动从可靠的开源库下载
+    if not os.path.exists(font_path):
+        url = "https://github.com/StellarCN/scp_zh/raw/master/fonts/SimHei.ttf"
+        urllib.request.urlretrieve(url, font_path)
+    # 强制 Matplotlib 加载并使用该字体
+    font_manager.fontManager.addfont(font_path)
+    plt.rcParams['font.sans-serif'] = ['SimHei']
+    plt.rcParams['axes.unicode_minus'] = False
+
+load_chinese_font()
 
 # ================= 核心物理模型 =================
 def realistic_decay(r, a, alpha, c):
@@ -113,12 +131,7 @@ if uploaded_file is not None:
 
     # ================= 渲染网页图表 =================
     
-    # 【中文字体修复核心代码】适配 Linux 云端环境
-    plt.rcParams['font.sans-serif'] = ['Noto Sans CJK SC', 'Noto Sans CJK JP', 'SimHei', 'Microsoft YaHei', 'sans-serif']
-    plt.rcParams['axes.unicode_minus'] = False 
-    
-    # --- 核心数据图表 ---
-    st.subheader("📊 核心数据分析")
+    st.subheader("📊 核心数据空间提取与拟合")
     fig1, axs1 = plt.subplots(2, 2, figsize=(16, 12))
 
     axs1[0, 0].imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
@@ -152,11 +165,9 @@ if uploaded_file is not None:
     plt.tight_layout()
     st.pyplot(fig1)
     
-    # --- 教学拓展图表 (3D & FFT) ---
+    # --- 高阶教学可视化 (3D & FFT) ---
     st.markdown("---")
-    st.subheader("🎓 高阶教学可视化 (3D 声压场与 FFT 频谱)")
-    
-    fig2 = plt.figure(figsize=(18, 8))
+    st.subheader("🎓 高阶教学可视化：打破维度限制")
     
     roi_width = int(w * 0.4)
     roi_height = int(w * 0.4)
@@ -166,39 +177,52 @@ if uploaded_file is not None:
     roi_x_end = min(gray.shape[1], line_start_x + roi_width)
     roi_gray = enhanced_gray[roi_y_start:roi_y_end, roi_x_start:roi_x_end]
 
-    ax_3d = fig2.add_subplot(1, 2, 1, projection='3d')
-    sub_sample = 4
-    roi_sub = roi_gray[::sub_sample, ::sub_sample]
-    X = np.arange(0, roi_sub.shape[1])
-    Y = np.arange(0, roi_sub.shape[0])
-    X, Y = np.meshgrid(X, Y)
-    Z = roi_sub.astype(float) - np.mean(roi_sub)
-    surf = ax_3d.plot_surface(X, Y, Z, cmap='coolwarm', linewidth=0, antialiased=True, alpha=0.9)
-    ax_3d.set_title('教学可视化一：三维超声波声压场地形图', fontsize=16, fontweight='bold', pad=20)
-    ax_3d.set_zlabel('声压差起伏')
-    ax_3d.axis('off') 
-    fig2.colorbar(surf, ax=ax_3d, shrink=0.5, aspect=10, pad=0.1)
+    col_3d, col_fft = st.columns(2)
 
-    ax_fft = fig2.add_subplot(1, 2, 2)
-    f = np.fft.fft2(roi_gray)
-    fshift = np.fft.fftshift(f) 
-    magnitude_spectrum = 20 * np.log(np.abs(fshift) + 1)
-    ax_fft.imshow(magnitude_spectrum, cmap='magma')
-    ax_fft.set_title('教学可视化二：二维傅里叶空间频谱图', fontsize=16, fontweight='bold', pad=20)
-    ax_fft.axis('off')
-    center_fft_y, center_fft_x = magnitude_spectrum.shape[0]//2, magnitude_spectrum.shape[1]//2
-    ax_fft.axhline(center_fft_y, color='white', linestyle='--', alpha=0.3)
-    ax_fft.axvline(center_fft_x, color='white', linestyle='--', alpha=0.3)
-    
-    plt.tight_layout()
-    st.pyplot(fig2)
+    with col_3d:
+        st.markdown("**教学可视化一：三维超声波声压场地形图**")
+        st.caption("👈 *提示：鼠标按住图表可任意拖拽旋转，滚轮可缩放*")
+        sub_sample = 4
+        roi_sub = roi_gray[::sub_sample, ::sub_sample]
+        X = np.arange(0, roi_sub.shape[1])
+        Y = np.arange(0, roi_sub.shape[0])
+        Z = roi_sub.astype(float) - np.mean(roi_sub)
+        
+        # 引入交互式 3D Plotly 引擎
+        fig_3d = go.Figure(data=[go.Surface(z=Z, x=X, y=Y, colorscale='RdBu_r')])
+        fig_3d.update_layout(
+            margin=dict(l=0, r=0, b=0, t=0),
+            scene=dict(
+                xaxis_title='X 像素',
+                yaxis_title='Y 像素',
+                zaxis_title='声压差起伏',
+                camera=dict(eye=dict(x=1.5, y=1.5, z=1.2)) # 默认观看视角
+            ),
+            height=500
+        )
+        st.plotly_chart(fig_3d, use_container_width=True)
+
+    with col_fft:
+        st.markdown("**教学可视化二：二维傅里叶空间频谱图**")
+        st.caption("证明空间波纹高度周期性的频域“指纹”")
+        f = np.fft.fft2(roi_gray)
+        fshift = np.fft.fftshift(f) 
+        magnitude_spectrum = 20 * np.log(np.abs(fshift) + 1)
+        
+        fig_fft, ax_fft = plt.subplots(figsize=(6, 5))
+        ax_fft.imshow(magnitude_spectrum, cmap='magma')
+        ax_fft.axis('off')
+        center_fft_y, center_fft_x = magnitude_spectrum.shape[0]//2, magnitude_spectrum.shape[1]//2
+        ax_fft.axhline(center_fft_y, color='white', linestyle='--', alpha=0.3)
+        ax_fft.axvline(center_fft_x, color='white', linestyle='--', alpha=0.3)
+        st.pyplot(fig_fft)
 
     # 核心数据展示
     st.markdown("---")
-    st.subheader("💡 核心数据提取结果")
+    st.subheader("💡 定量计算结果")
     col1, col2 = st.columns(2)
-    col1.metric("实测超声波波长", f"{wavelength_mm:.2f} mm")
-    col2.metric("推算空气声速", f"{sound_speed_m_s:.2f} m/s")
+    col1.metric("实测超声波波长 (λ)", f"{wavelength_mm:.2f} mm")
+    col2.metric("推算空气声速 (v)", f"{sound_speed_m_s:.2f} m/s")
 
 else:
-    st.info("💡 请在上方上传图片，系统将自动开始计算。")
+    st.info("💡 请在上方上传图片，系统将自动开始计算并渲染交互式图表。")
