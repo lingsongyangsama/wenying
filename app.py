@@ -8,6 +8,7 @@ import os
 import urllib.request
 from matplotlib import font_manager
 import plotly.graph_objects as go
+from fpdf import FPDF  # 核心新增：导入PDF生成模块
 
 # ================= 网页基础配置 =================
 st.set_page_config(page_title="超声波物理特征数字分析平台", layout="wide")
@@ -372,7 +373,7 @@ if uploaded_file is not None:
         st.info(f"**📝 计算指南与已知条件**\n\n"
                 f"1. **求像素距离**：把鼠标悬停在【图2】的波峰（红叉）上，读出相邻两个波峰的 X 坐标并相减，这就是一个波长包含的像素数。*(💡提示：为了减小误差，你可以读取相隔5个波峰的距离，再除以5！)*\n\n"
                 f"2. **换算物理波长 (λ)**：系统通过测量镜面轮廓，算出了当前照片的物理比例尺为 **1 像素 = {mm_per_pixel:.4f} mm**。将上一步的像素距离乘以它，得到实际波长。\n\n"
-                f"3. **计算声速 (v)**：已知超声波探头的发射频率 f = **{frequency_hz} Hz**。利用波速公式 $v = \lambda \\times f$ 即可求出声速。*(⚠️避坑警告：记得把 mm 换算成 m 喔！)*")
+                f"3. **计算声速 (v)**：已知超声波探头的发射频率 f = **{frequency_hz} Hz**。利用波速公式 $v = \\lambda \\times f$ 即可求出声速。*(⚠️避坑警告：记得把 mm 换算成 m 喔！)*")
 
     with col_calc:
         st.markdown("**✏️ 填入你的计算结果**")
@@ -390,18 +391,80 @@ if uploaded_file is not None:
         res_col1.metric("系统实测超声波波长 (λ)", f"{wavelength_mm:.2f} mm", delta=delta_lambda, delta_color="off")
         res_col2.metric("系统推断空气声速 (v)", f"{sound_speed_m_s:.2f} m/s", delta=delta_v, delta_color="off")
         
+        # 定义初始状态和报告所需的评语变量
+        error_percent = 0.0
+        eval_text = "（学生尚未提交自主计算结果进行对比评估）"
+        
         if student_v > 0:
             st.markdown("### 🎯 你的误差智能分析")
             error_percent = abs(student_v - sound_speed_m_s) / sound_speed_m_s * 100
             
             if error_percent < 3:
-                st.success(f"🎉 **完美！相对误差仅为 {error_percent:.2f}%！** \n\n你读取的数据非常精准，而且完美避开了单位换算的陷阱，具备了严谨的科学素养！")
+                eval_text = "你读取的数据非常精准，而且完美避开了单位换算的陷阱，具备了严谨的科学素养！"
+                st.success(f"🎉 **完美！相对误差仅为 {error_percent:.2f}%！** \n\n{eval_text}")
             elif student_v > 10000: 
-                st.error(f"😱 **相对误差极大！** \n\n你算出来的声速比火箭还要快！仔细看看你的计算过程，是不是**忘记把波长的单位从毫米 (mm) 换算成米 (m)** 就直接跟频率相乘了？回去改一下试试！")
+                eval_text = "你算出来的声速比火箭还要快！仔细看看你的计算过程，是不是忘记把波长的单位从毫米 (mm) 换算成米 (m) 就直接跟频率相乘了？回去改一下试试！"
+                st.error(f"😱 **相对误差极大！** \n\n{eval_text}")
             else:
-                st.warning(f"🤔 **相对误差为 {error_percent:.2f}%。大方向对了，但有一点小偏差哦！** \n\n单位换算应该是对的，但取点可能不够准。在图2中读取相隔较远（比如第1个和第8个）的红叉的 X 坐标，相减后除以中间包含的波段数，这样能极大减小偶然误差！再去试试看吧！")
+                eval_text = "单位换算应该是对的，但取点可能不够准。在图2中读取相隔较远（比如第1个和第8个）的红叉的 X 坐标，相减后除以中间包含的波段数，这样能极大减小偶然误差！再去试试看吧！"
+                st.warning(f"🤔 **相对误差为 {error_percent:.2f}%。大方向对了，但有一点小偏差哦！** \n\n{eval_text}")
 
         st.caption("注：系统采用了全像素阵列多点均值技术，因此可能会与你手动选取两点计算的结果有微小差异，这是正常的实验误差。")
+        
+        # ================= 生成与下载 PDF 实验报告 =================
+        st.markdown("---")
+        st.markdown("### 📄 专属实验报告导出")
+        st.caption("学生可以一键将当前图像的处理结果、自主测算数据以及系统的智能误差评估打包为标准 PDF 报告。")
+        
+        # 在内存中动态排版 PDF
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.add_font("SimHei", "", "SimHei.ttf", uni=True) # 使用平台已下载好的中文字体
+        
+        # 报告页眉大标题
+        pdf.set_font("SimHei", size=18)
+        pdf.cell(0, 15, txt="超声波干涉与声速空间数字分析实验报告", ln=True, align="C")
+        pdf.set_font("SimHei", size=12)
+        pdf.cell(0, 8, txt="-"*65, ln=True, align="C")
+        pdf.cell(0, 8, txt="", ln=True)
+        
+        # 第一部分：系统基准提取
+        pdf.set_font("SimHei", size=14)
+        pdf.cell(0, 10, txt="一、 系统视觉提取与核心算法基准数据", ln=True)
+        pdf.set_font("SimHei", size=12)
+        pdf.cell(0, 8, txt=f"  - 图像物理比例尺: 1 像素 = {mm_per_pixel:.4f} mm", ln=True)
+        pdf.cell(0, 8, txt=f"  - 探头发射频率 f: {frequency_hz} Hz", ln=True)
+        pdf.cell(0, 8, txt=f"  - 多点均值法测量波长 λ: {wavelength_mm:.2f} mm", ln=True)
+        pdf.cell(0, 8, txt=f"  - 算法推荐理论声速 v: {sound_speed_m_s:.2f} m/s", ln=True)
+        pdf.cell(0, 8, txt="", ln=True)
+        
+        # 第二部分：自主测算部分
+        pdf.set_font("SimHei", size=14)
+        pdf.cell(0, 10, txt="二、 学生自主读图探究结果记录", ln=True)
+        pdf.set_font("SimHei", size=12)
+        if student_v > 0:
+            pdf.cell(0, 8, txt=f"  - 自主测算声波波长 λ: {student_lambda:.2f} mm", ln=True)
+            pdf.cell(0, 8, txt=f"  - 自主推算空气声速 v: {student_v:.2f} m/s", ln=True)
+            pdf.cell(0, 8, txt=f"  - 测算结果相对误差: {error_percent:.2f}%", ln=True)
+        else:
+            pdf.cell(0, 8, txt="  - （学生尚未在平台上输入自主测算数据）", ln=True)
+        pdf.cell(0, 8, txt="", ln=True)
+            
+        # 第三部分：智能综合评语
+        pdf.set_font("SimHei", size=14)
+        pdf.cell(0, 10, txt="三、 探究表现智能评估反馈", ln=True)
+        pdf.set_font("SimHei", size=12)
+        pdf.multi_cell(0, 8, txt=f"  {eval_text}")
+        
+        # 转换为字节流构建下载按钮
+        pdf_bytes = bytes(pdf.output())
+        
+        st.download_button(
+            label="⬇️ 一键生成并下载 PDF 实验报告",
+            data=pdf_bytes,
+            file_name="超声波测声速_数字分析实验报告.pdf",
+            mime="application/pdf"
+        )
 
 else:
     st.info("💡 期待您的探索！请在上方上传实际拍摄的纹影图像，系统将自动执行解析。")
