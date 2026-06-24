@@ -363,12 +363,38 @@ if uploaded_file is not None:
         ax_fft.axvline(center_fft_x, color='white', linestyle='--', alpha=0.3)
         st.pyplot(fig_fft)
 
-    # 核心数据展示
+# ================= 互动教学：读图计算与结果核对 =================
     st.markdown("---")
-    st.subheader("💡 定量计算结果")
-    col1, col2 = st.columns(2)
-    col1.metric("实测超声波波长 (λ)", f"{wavelength_mm:.2f} mm")
-    col2.metric("推算空气声速 (v)", f"{sound_speed_m_s:.2f} m/s")
+    st.subheader("🧠 探究挑战：根据图像自己算出声速！")
+    st.markdown("真正的物理学家可不会只看现成的答案。利用上面的**图2**，你能自己算出空气中的声速吗？")
+
+    col_guide, col_calc = st.columns([1.2, 1])
+
+    with col_guide:
+        st.info(f"**📝 计算指南与已知条件**\n\n"
+                f"1. **求像素距离**：把鼠标悬停在【图2】的波峰（红叉）上，读出相邻两个波峰的 X 坐标并相减，这就是一个波长包含的像素数。*(💡提示：为了减小误差，你可以读取相隔5个波峰的距离，再除以5！)*\n\n"
+                f"2. **换算物理波长 ($\lambda$)**：系统通过测量镜面轮廓，算出了当前照片的物理比例尺为 **1 像素 = {mm_per_pixel:.4f} mm**。将上一步的像素距离乘以它，得到实际波长。\n\n"
+                f"3. **计算声速 ($v$)**：已知超声波探头的发射频率 $f = {frequency_hz} \\text{ Hz}$。利用波速公式 $v = \\lambda \\times f$ 即可求出声速。*(⚠️避坑警告：记得把 mm 换算成 m 喔！)*")
+
+    with col_calc:
+        st.markdown("**✏️ 填入你的计算结果**")
+        student_lambda = st.number_input("你算出的波长 λ (mm)", min_value=0.0, value=0.0, step=0.1, format="%.2f")
+        student_v = st.number_input("你算出的声速 v (m/s)", min_value=0.0, value=0.0, step=0.1, format="%.2f")
+
+    # 用折叠面板将系统的最终答案藏起来，起到“刮刮乐”对答案的效果
+    with st.expander("👀 算完了吗？点击这里核对系统的精准分析结果！", expanded=False):
+        st.markdown("系统提取了主线上所有的波峰数据进行了综合平均运算，得到了当前的精准数值：")
+        
+        res_col1, res_col2 = st.columns(2)
+        
+        # 利用 Streamlit 的 delta 功能动态显示误差
+        delta_lambda = f"与你的误差 {wavelength_mm - student_lambda:.2f} mm" if student_lambda > 0 else None
+        delta_v = f"与你的误差 {sound_speed_m_s - student_v:.2f} m/s" if student_v > 0 else None
+        
+        res_col1.metric("系统实测超声波波长 (λ)", f"{wavelength_mm:.2f} mm", delta=delta_lambda, delta_color="inverse")
+        res_col2.metric("系统推断空气声速 (v)", f"{sound_speed_m_s:.2f} m/s", delta=delta_v, delta_color="inverse")
+        
+        st.caption("注：系统采用了全像素阵列多点均值技术，因此可能会与你手动选取两点计算的结果有微小差异，这是正常的实验误差。你可以对比一下你算得准不准！")
 
 else:
     st.info("💡 期待您的探索！请在上方上传实际拍摄的纹影图像，系统将自动执行解析。")
