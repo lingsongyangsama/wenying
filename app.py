@@ -12,29 +12,96 @@ import plotly.graph_objects as go
 # ================= 网页基础配置 =================
 st.set_page_config(page_title="超声波物理特征数字分析平台", layout="wide")
 st.title("🌊 超声波干涉与传播空间高级分析系统")
-st.markdown("上传纹影法拍摄的超声波干涉/传播图像，系统将自动进行波阵面提取、声速推算及 **交互式 3D** / FFT 高阶分析。")
+st.markdown("基于单镜离轴纹影系统与机器视觉，探究超声波的波阵面、声速及能量耗散规律。")
 
-# 侧边栏：参数设置
-st.sidebar.header("⚙️ 实验参数设置")
-real_diameter_mm = st.sidebar.number_input("凹面镜视场真实直径 (mm)", value=203.0, step=1.0)
-frequency_hz = st.sidebar.number_input("超声波发射频率 (Hz)", value=40000.0, step=100.0)
-
-# ================= 字体乱码终极修复 (强制云端加载中文字体) =================
+# ================= 字体乱码终极修复 =================
 @st.cache_resource
 def load_chinese_font():
     font_path = "SimHei.ttf"
-    # 如果服务器上没有这个字体，自动从可靠的开源库下载
     if not os.path.exists(font_path):
         url = "https://github.com/StellarCN/scp_zh/raw/master/fonts/SimHei.ttf"
         urllib.request.urlretrieve(url, font_path)
-    # 强制 Matplotlib 加载并使用该字体
     font_manager.fontManager.addfont(font_path)
     plt.rcParams['font.sans-serif'] = ['SimHei']
     plt.rcParams['axes.unicode_minus'] = False
 
 load_chinese_font()
 
-# ================= 核心物理模型 =================
+# 侧边栏：参数设置
+st.sidebar.header("⚙️ 实验参数设置")
+real_diameter_mm = st.sidebar.number_input("凹面镜视场真实直径 (mm)", value=203.0, step=1.0)
+frequency_hz = st.sidebar.number_input("超声波发射频率 (Hz)", value=40000.0, step=100.0)
+
+# ================= 新增：原理介绍与光路仿真 =================
+st.markdown("---")
+st.header("🔬 纹影成像原理与光路仿真")
+
+col_text, col_sim = st.columns([1, 1.2])
+
+with col_text:
+    st.markdown("### 为什么能“看见”声波？")
+    st.markdown("""
+    超声波在空气中传播时，本质上是空气分子的纵向振动，这会导致空间中产生周期性的**疏密变化**。
+    
+    根据格拉德斯通-戴尔定律 (Gladstone-Dale relation)，气体的折射率 $n$ 与其密度 $\\rho$ 成正比：
+    $$n - 1 = K \\rho$$
+    
+    当平行光束穿过测试区域时，由于超声波波阵面（波腹与波节）处的折射率 $n$ 不同，光线会发生微小的偏折（折射）。
+    
+    在**单镜离轴纹影光路**中，我们在反射光束的焦点处放置了一个**切光刀片 (Knife-edge)**。
+    * **未偏折的光线**：被刀片精准阻挡（或部分阻挡）。
+    * **偏折的光线**：若向上偏折则越过刀片，在相机中形成**亮区**；若向下偏折则被刀片完全遮挡，形成**暗区**。
+    
+    由此，我们将肉眼无法看见的**相位差**（折射率变化），完美转化为了相机可以捕捉的**振幅差**（光强明暗变化）。
+    """)
+
+with col_sim:
+    st.markdown("### 单镜离轴纹影光路交互演示")
+    # 构建交互式 Plotly 光路图
+    fig_optics = go.Figure()
+
+    # 1. 绘制凹面反射镜 (右侧圆弧)
+    theta = np.linspace(-0.5, 0.5, 50)
+    R = 200
+    mirror_x = 200 - 20 * np.cos(theta)
+    mirror_y = R * np.sin(theta)
+    fig_optics.add_trace(go.Scatter(x=mirror_x, y=mirror_y, mode='lines', line=dict(color='lightblue', width=6), name='凹面反射镜'))
+
+    # 2. 绘制光轴与对称轴
+    fig_optics.add_trace(go.Scatter(x=[-250, 200], y=[0, 0], mode='lines', line=dict(color='gray', width=1, dash='dash'), showlegend=False))
+    
+    # 3. 绘制光源与刀片位置 (离轴)
+    source_x, source_y = -200, 30
+    knife_x, knife_y = -200, -30
+    fig_optics.add_trace(go.Scatter(x=[source_x], y=[source_y], mode='markers', marker=dict(color='red', size=12), name='点光源'))
+    fig_optics.add_trace(go.Scatter(x=[-250, -180], y=[knife_y-10, knife_y-10], mode='lines', line=dict(color='black', width=8), name='切光刀片/相机'))
+
+    # 4. 绘制光路 (发散 -> 反射 -> 汇聚)
+    rays_y = [80, 0, -80] # 打在镜面上的三个点
+    for ry in rays_y:
+        rx = 200 - 20 * np.cos(np.arcsin(ry/R))
+        # 入射光
+        fig_optics.add_trace(go.Scatter(x=[source_x, rx], y=[source_y, ry], mode='lines', line=dict(color='cyan', width=1.5), showlegend=False))
+        # 反射光
+        fig_optics.add_trace(go.Scatter(x=[rx, knife_x], y=[ry, knife_y], mode='lines', line=dict(color='blue', width=1.5), showlegend=False))
+
+    # 5. 测试区域框
+    fig_optics.add_shape(type="rect", x0=0, y0=-90, x1=120, y1=90, line=dict(color="gray", dash="dash"), fillcolor="rgba(0,0,0,0)")
+    fig_optics.add_annotation(x=60, y=100, text="测试区域 (超声波场)", showarrow=False)
+
+    fig_optics.update_layout(
+        xaxis=dict(visible=False, range=[-250, 220]),
+        yaxis=dict(visible=False, range=[-120, 120]),
+        margin=dict(l=0, r=0, t=30, b=0),
+        height=300,
+        plot_bgcolor='rgba(0,0,0,0)',
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+    )
+    st.plotly_chart(fig_optics, use_container_width=True)
+
+st.markdown("---")
+
+# ================= 核心物理模型定义 =================
 def realistic_decay(r, a, alpha, c):
     r_safe = np.maximum(r, 1e-5)
     return a * (1 / np.sqrt(r_safe)) * np.exp(-alpha * r_safe) + c
@@ -50,6 +117,7 @@ def calc_circle_center(p1, p2, p3):
     return (cx, cy)
 
 # ================= 文件上传模块 =================
+st.header("📂 实验数据上传与解析")
 uploaded_file = st.file_uploader("请在此处上传实验截图 (支持 JPG/PNG)", type=['jpg', 'png', 'jpeg'])
 
 if uploaded_file is not None:
@@ -188,7 +256,6 @@ if uploaded_file is not None:
         Y = np.arange(0, roi_sub.shape[0])
         Z = roi_sub.astype(float) - np.mean(roi_sub)
         
-        # 引入交互式 3D Plotly 引擎
         fig_3d = go.Figure(data=[go.Surface(z=Z, x=X, y=Y, colorscale='RdBu_r')])
         fig_3d.update_layout(
             margin=dict(l=0, r=0, b=0, t=0),
@@ -196,7 +263,7 @@ if uploaded_file is not None:
                 xaxis_title='X 像素',
                 yaxis_title='Y 像素',
                 zaxis_title='声压差起伏',
-                camera=dict(eye=dict(x=1.5, y=1.5, z=1.2)) # 默认观看视角
+                camera=dict(eye=dict(x=1.5, y=1.5, z=1.2))
             ),
             height=500
         )
@@ -225,4 +292,4 @@ if uploaded_file is not None:
     col2.metric("推算空气声速 (v)", f"{sound_speed_m_s:.2f} m/s")
 
 else:
-    st.info("💡 请在上方上传图片，系统将自动开始计算并渲染交互式图表。")
+    st.info("💡 理论与光路已就绪。请在上方上传实际拍摄的纹影图像，系统将自动执行解析。")
