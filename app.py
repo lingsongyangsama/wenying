@@ -244,39 +244,45 @@ if uploaded_file is not None:
             fit_success = False
 
     # ================= 渲染网页图表 =================
+# ================= 渲染网页图表 =================
     st.subheader("📊 核心数据空间提取与拟合")
     
     row1_col1, row1_col2 = st.columns(2)
     row2_col1, row2_col2 = st.columns(2)
 
     with row1_col1:
+        # 【修改点】统一使用网页原生加粗文本作为标题，保证左右字体绝对一致
+        st.markdown("**图1: 三线空间采样与波阵面提取**")
         fig1, ax1 = plt.subplots(figsize=(6, 4))
         ax1.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
         ax1.plot(x_axis, [center_y]*len(x_axis), 'r-', alpha=0.5, label='主采样线')
         ax1.plot(x_axis, [center_y - offset_val]*len(x_axis), 'g--', alpha=0.3, label='上采样线')
         ax1.plot(x_axis, [center_y + offset_val]*len(x_axis), 'g--', alpha=0.3, label='下采样线')
         ax1.scatter(peaks_center, [center_y]*len(peaks_center), c='red', s=15, zorder=5)
-        ax1.set_title('图1: 三线空间采样与波阵面提取', fontsize=12, fontweight='bold')
         ax1.axis('off')
+        fig1.tight_layout(pad=0) # 【修改点】压缩 Matplotlib 自带的外部多余白边
         st.pyplot(fig1)
-        with st.expander("💡 老师说：图1在干嘛？"):
+        with st.expander("💡图1在干嘛？"):
             st.markdown("你看照片上的明暗条纹，那就是超声波！电脑在画面上‘拉’了三条横线，去感受哪里最亮（波腹）。**红点**就是电脑准确抓到的每一个声波波峰的位置。")
 
     with row1_col2:
+        # 【修改点】使用原生文本作为标题，动态嵌入变量
+        st.markdown(f"**图2: 测量结果 (波长 λ = {wavelength_mm:.2f} mm, 声速 v = {sound_speed_m_s:.2f} m/s)**")
         fig2 = go.Figure()
         fig2.add_trace(go.Scatter(x=x_axis, y=profile_center, mode='lines', name='灰度剖面', line=dict(color='black', width=1.5)))
         fig2.add_trace(go.Scatter(x=peaks_center, y=peak_intensities, mode='markers', name='提取峰值', marker=dict(color='red', symbol='x', size=8)))
         fig2.update_layout(
-            title=f'图2: 测量结果 (波长 λ = {wavelength_mm:.2f} mm, 声速 v = {sound_speed_m_s:.2f} m/s)',
             xaxis_title="像素 X 坐标", yaxis_title="光强 (灰度)",
-            margin=dict(l=20, r=20, t=40, b=20), height=350,
+            margin=dict(l=20, r=20, t=10, b=20), # 【修改点】顶部边距(t)大幅缩小到10，让图表下沉，实现完美水平对齐
+            height=350,
             hovermode="x unified"
         )
         st.plotly_chart(fig2, use_container_width=True)
-        with st.expander("💡 老师说：图2怎么看？"):
+        with st.expander("💡图2怎么看？"):
             st.markdown("这是把图1中间那条线的光强变化‘画’成了波浪线。两个红色叉叉之间的距离，在物理上就代表了一个**波长**！利用波长和已知的频率，我们就能算出声音传播的速度了。")
 
     with row2_col1:
+        st.markdown("**图3: 二维同心圆反向声源定位**")
         fig3, ax3 = plt.subplots(figsize=(6, 4))
         ax3.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
         ax3.plot(source_x, source_y, 'r*', markersize=15, label='虚拟点声源')
@@ -284,28 +290,28 @@ if uploaded_file is not None:
             radius = np.sqrt((px - source_x)**2 + (center_y - source_y)**2)
             circle = plt.Circle((source_x, source_y), radius, color='yellow', fill=False, linestyle=':', linewidth=1.5)
             ax3.add_patch(circle)
-        ax3.set_title('图3: 二维同心圆反向声源定位', fontsize=12, fontweight='bold')
         ax3.axis('off')
+        fig3.tight_layout(pad=0) # 压缩白边
         st.pyplot(fig3)
-        with st.expander("💡 老师说：图3的同心圆代表什么？"):
+        with st.expander("💡图3的同心圆代表什么？"):
             st.markdown("想象一下往水池里扔一颗石子，波纹是一圈圈扩散的。根据图1里上下中三个红点的位置，电脑利用几何知识（三点确定一个圆），像侦探一样**反向推算**出了发射超声波的探头（红星位置）到底藏在画面外面的哪里！")
 
     with row2_col2:
+        st.markdown("**图4: 超声波能量衰减物理分析**")
         fig4 = go.Figure()
         fig4.add_trace(go.Scatter(x=peak_radial_distances, y=peak_intensities, mode='markers', name='实测峰值', marker=dict(color='blue', size=8)))
         if fit_success:
             r_smooth = np.linspace(np.min(peak_radial_distances), np.max(peak_radial_distances), 100)
             fig4.add_trace(go.Scatter(x=r_smooth, y=realistic_decay(r_smooth, *popt), mode='lines', name='综合衰减模型', line=dict(color='red', width=2)))
         fig4.update_layout(
-            title='图4: 超声波能量衰减物理分析',
             xaxis_title="距声源径向距离 (像素)", yaxis_title="波峰相对光强",
-            margin=dict(l=20, r=20, t=40, b=20), height=350,
+            margin=dict(l=20, r=20, t=10, b=20), # 缩小顶部边距对齐左图
+            height=350,
             hovermode="closest"
         )
         st.plotly_chart(fig4, use_container_width=True)
-        with st.expander("💡 老师说：声音是怎么变弱的？"):
+        with st.expander("💡声音是怎么变弱的？"):
             st.markdown("常识告诉我们，离得越远，声音越小。图上的蓝点是我们真实测到的声音能量，红线是物理学家通过数学公式算出来的理论衰减曲线。你可以看看，我们实测的数据跟科学家的理论吻合得漂不漂亮！")
-    
     # --- 高阶教学可视化 (3D & FFT) ---
     st.markdown("---")
     st.subheader("🎓 高阶教学可视化：打破维度限制")
