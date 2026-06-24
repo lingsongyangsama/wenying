@@ -379,18 +379,33 @@ if uploaded_file is not None:
         student_lambda = st.number_input("你算出的波长 λ (mm)", min_value=0.0, value=0.0, step=0.1, format="%.2f")
         student_v = st.number_input("你算出的声速 v (m/s)", min_value=0.0, value=0.0, step=0.1, format="%.2f")
 
-    with st.expander("👀 算完了吗？点击这里核对系统的精准分析结果！", expanded=False):
+   with st.expander("👀 算完了吗？点击这里核对系统的精准分析结果！", expanded=False):
         st.markdown("系统提取了主线上所有的波峰数据进行了综合平均运算，得到了当前的精准数值：")
         
         res_col1, res_col2 = st.columns(2)
         
-        delta_lambda = f"与你的误差 {wavelength_mm - student_lambda:.2f} mm" if student_lambda > 0 else None
-        delta_v = f"与你的误差 {sound_speed_m_s - student_v:.2f} m/s" if student_v > 0 else None
+        # 简单差值显示
+        delta_lambda = f"差值 {student_lambda - wavelength_mm:.2f} mm" if student_lambda > 0 else None
+        delta_v = f"差值 {student_v - sound_speed_m_s:.2f} m/s" if student_v > 0 else None
         
-        res_col1.metric("系统实测超声波波长 (λ)", f"{wavelength_mm:.2f} mm", delta=delta_lambda, delta_color="inverse")
-        res_col2.metric("系统推断空气声速 (v)", f"{sound_speed_m_s:.2f} m/s", delta=delta_v, delta_color="inverse")
+        res_col1.metric("系统实测超声波波长 (λ)", f"{wavelength_mm:.2f} mm", delta=delta_lambda, delta_color="off")
+        res_col2.metric("系统推断空气声速 (v)", f"{sound_speed_m_s:.2f} m/s", delta=delta_v, delta_color="off")
         
-        st.caption("注：系统采用了全像素阵列多点均值技术，因此可能会与你手动选取两点计算的结果有微小差异，这是正常的实验误差。你可以对比一下你算得准不准！")
+        # ================= 新增：智能误差分析与纠错机制 =================
+        if student_v > 0:
+            st.markdown("### 🎯 你的误差智能分析")
+            error_percent = abs(student_v - sound_speed_m_s) / sound_speed_m_s * 100
+            
+            # 智能判定逻辑
+            if error_percent < 3:
+                st.success(f"🎉 **完美！相对误差仅为 {error_percent:.2f}%！** \n\n你读取的数据非常精准，而且完美避开了单位换算的陷阱，具备了严谨的科学素养！")
+            elif student_v > 10000: 
+                # 常见错误：忘了 mm 转 m，数值会放大 1000 倍
+                st.error(f"😱 **相对误差极大！** \n\n你算出来的声速比火箭还要快！仔细看看你的计算过程，是不是**忘记把波长的单位从毫米 (mm) 换算成米 (m)** 就直接跟频率相乘了？回去改一下试试！")
+            else:
+                st.warning(f"🤔 **相对误差为 {error_percent:.2f}%。大方向对了，但有一点小偏差哦！** \n\n单位换算应该是对的，但取点可能不够准。**老师支招：**在图2中读取相隔较远（比如第1个和第8个）的红叉的 X 坐标，相减后除以中间包含的波段数，这样能极大减小偶然误差！再去试试看吧！")
+
+        st.caption("注：系统采用了全像素阵列多点均值技术，因此可能会与你手动选取两点计算的结果有微小差异，这是正常的实验误差。")
 
 else:
     st.info("💡 期待您的探索！请在上方上传实际拍摄的纹影图像，系统将自动执行解析。")
