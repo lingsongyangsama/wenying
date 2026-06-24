@@ -8,7 +8,7 @@ import os
 import urllib.request
 from matplotlib import font_manager
 import plotly.graph_objects as go
-from fpdf import FPDF  # 核心新增：导入PDF生成模块
+from fpdf import FPDF  
 
 # ================= 网页基础配置 =================
 st.set_page_config(page_title="超声波物理特征数字分析平台", layout="wide")
@@ -150,7 +150,6 @@ def calc_circle_center(p1, p2, p3):
 # ================= 文件上传与示例模块 =================
 st.header("📂 实验数据上传与解析")
 
-# 示例图片下载功能
 if os.path.exists("example.jpg"):
     with open("example.jpg", "rb") as file:
         st.download_button(
@@ -261,11 +260,11 @@ if uploaded_file is not None:
         ax1.axis('off')
         fig1.tight_layout(pad=0)
         st.pyplot(fig1)
-        with st.expander("💡 图1在干嘛？"):
+        with st.expander("💡 老师说：图1在干嘛？"):
             st.markdown("你看照片上的明暗条纹，那就是超声波！电脑在画面上‘拉’了三条横线，去感受哪里最亮（波腹）。**红点**就是电脑准确抓到的每一个声波波峰的位置。")
 
     with row1_col2:
-        st.markdown(f"**图2: 测量结果**")
+        st.markdown(f"**图2: 测量结果 (波长 λ = {wavelength_mm:.2f} mm, 声速 v = {sound_speed_m_s:.2f} m/s)**")
         fig2 = go.Figure()
         fig2.add_trace(go.Scatter(x=x_axis, y=profile_center, mode='lines', name='灰度剖面', line=dict(color='black', width=1.5)))
         fig2.add_trace(go.Scatter(x=peaks_center, y=peak_intensities, mode='markers', name='提取峰值', marker=dict(color='red', symbol='x', size=8)))
@@ -276,7 +275,7 @@ if uploaded_file is not None:
             hovermode="x unified"
         )
         st.plotly_chart(fig2, use_container_width=True)
-        with st.expander("💡 图2怎么看？"):
+        with st.expander("💡 老师说：图2怎么看？"):
             st.markdown("这是把图1中间那条线的光强变化‘画’成了波浪线。两个红色叉叉之间的距离，在物理上就代表了一个**波长**！利用波长和已知的频率，我们就能算出声音传播的速度了。")
 
     with row2_col1:
@@ -291,7 +290,7 @@ if uploaded_file is not None:
         ax3.axis('off')
         fig3.tight_layout(pad=0)
         st.pyplot(fig3)
-        with st.expander("💡 图3的同心圆代表什么？"):
+        with st.expander("💡 老师说：图3的同心圆代表什么？"):
             st.markdown("想象一下往水池里扔一颗石子，波纹是一圈圈扩散的。根据图1里上下中三个红点的位置，电脑利用几何知识（三点确定一个圆），像侦探一样**反向推算**出了发射超声波的探头（红星位置）到底藏在画面外面的哪里！")
 
     with row2_col2:
@@ -308,7 +307,7 @@ if uploaded_file is not None:
             hovermode="closest"
         )
         st.plotly_chart(fig4, use_container_width=True)
-        with st.expander("💡 声音是怎么变弱的？"):
+        with st.expander("💡 老师说：声音是怎么变弱的？"):
             st.markdown("常识告诉我们，离得越远，声音越小。图上的蓝点是我们真实测到的声音能量，红线是物理学家通过数学公式算出来的理论衰减曲线。你可以看看，我们实测的数据跟科学家的理论吻合得漂不漂亮！")
     
     # --- 高阶教学可视化 (3D & FFT) ---
@@ -365,7 +364,7 @@ if uploaded_file is not None:
     # ================= 互动教学：读图计算与结果核对 =================
     st.markdown("---")
     st.subheader("🧠 探究挑战：根据图像自己算出声速！")
-    st.markdown("利用上面的**图2**，你能自己算出空气中的声速吗？")
+    st.markdown("真正的物理学家可不会只看现成的答案。利用上面的**图2**，你能自己算出空气中的声速吗？")
 
     col_guide, col_calc = st.columns([1.2, 1])
 
@@ -373,7 +372,7 @@ if uploaded_file is not None:
         st.info(f"**📝 计算指南与已知条件**\n\n"
                 f"1. **求像素距离**：把鼠标悬停在【图2】的波峰（红叉）上，读出相邻两个波峰的 X 坐标并相减，这就是一个波长包含的像素数。*(💡提示：为了减小误差，你可以读取相隔5个波峰的距离，再除以5！)*\n\n"
                 f"2. **换算物理波长 (λ)**：系统通过测量镜面轮廓，算出了当前照片的物理比例尺为 **1 像素 = {mm_per_pixel:.4f} mm**。将上一步的像素距离乘以它，得到实际波长。\n\n"
-                f"3. **计算声速 (v)**：已知超声波探头的发射频率 f = **{frequency_hz} Hz**。利用波速公式 $v = \\lambda \\times f$ 即可求出声速。*(⚠️避坑警告：记得把 mm 换算成 m 喔！)*")
+                f"3. **计算声速 (v)**：已知超声波探头的发射频率 f = **{frequency_hz} Hz**。利用波速公式 $v = \lambda \\times f$ 即可求出声速。*(⚠️避坑警告：记得把 mm 换算成 m 喔！)*")
 
     with col_calc:
         st.markdown("**✏️ 填入你的计算结果**")
@@ -406,29 +405,57 @@ if uploaded_file is not None:
                 eval_text = "你算出来的声速比火箭还要快！仔细看看你的计算过程，是不是忘记把波长的单位从毫米 (mm) 换算成米 (m) 就直接跟频率相乘了？回去改一下试试！"
                 st.error(f"😱 **相对误差极大！** \n\n{eval_text}")
             else:
-                eval_text = "单位换算应该是对的，但取点可能不够准。在图2中读取相隔较远（比如第1个和第8个）的红叉的 X 坐标，相减后除以中间包含的波段数，这样能极大减小偶然误差！再去试试看吧！"
+                eval_text = "单位换算应该是对的，但取点可能不够准。在图2中读取相隔较远（比如第1个和第8个）的红叉的 X 坐标，相减后除以中间包含的波段数，这样能极大减小偶然误差！"
                 st.warning(f"🤔 **相对误差为 {error_percent:.2f}%。大方向对了，但有一点小偏差哦！** \n\n{eval_text}")
 
         st.caption("注：系统采用了全像素阵列多点均值技术，因此可能会与你手动选取两点计算的结果有微小差异，这是正常的实验误差。")
         
-        # ================= 生成与下载 PDF 实验报告 =================
+        # ================= 生成与下载包含全套图表的 PDF 实验报告 =================
         st.markdown("---")
         st.markdown("### 📄 专属实验报告导出")
-        st.caption("学生可以一键将当前图像的处理结果、自主测算数据以及系统的智能误差评估打包为标准 PDF 报告。")
+        st.caption("学生可以一键将当前图像的处理结果（包含完整的4组物理分析图表）、自主测算数据以及系统的智能误差评估打包为标准 PDF 报告。")
         
-        # 在内存中动态排版 PDF
+        # --- 后台将 4 张图表保存为本地图片 ---
+        fig1.savefig("temp_fig1.png", dpi=150, bbox_inches='tight')
+        fig3.savefig("temp_fig3.png", dpi=150, bbox_inches='tight')
+
+        # 用 matplotlib 重绘图2和图4（避开Plotly在云端服务器导出时的环境变量深坑）
+        fig2_pdf, ax2_pdf = plt.subplots(figsize=(6, 4))
+        ax2_pdf.plot(x_axis, profile_center, 'k-', linewidth=1.5, label='灰度剖面')
+        ax2_pdf.scatter(peaks_center, peak_intensities, color='red', marker='X', s=60, label='提取峰值')
+        ax2_pdf.set_title(f'图2: 测量结果 (波长 λ = {wavelength_mm:.2f} mm)', fontsize=12)
+        ax2_pdf.set_xlabel("像素 X 坐标")
+        ax2_pdf.set_ylabel("光强 (灰度)")
+        ax2_pdf.legend()
+        fig2_pdf.tight_layout()
+        fig2_pdf.savefig("temp_fig2.png", dpi=150, bbox_inches='tight')
+        plt.close(fig2_pdf) # 释放内存
+
+        fig4_pdf, ax4_pdf = plt.subplots(figsize=(6, 4))
+        ax4_pdf.scatter(peak_radial_distances, peak_intensities, color='blue', s=40, label='实测峰值')
+        if fit_success:
+            r_smooth_pdf = np.linspace(np.min(peak_radial_distances), np.max(peak_radial_distances), 100)
+            ax4_pdf.plot(r_smooth_pdf, realistic_decay(r_smooth_pdf, *popt), 'r-', linewidth=2, label='综合衰减模型')
+        ax4_pdf.set_title('图4: 超声波能量衰减物理分析', fontsize=12)
+        ax4_pdf.set_xlabel("距声源径向距离 (像素)")
+        ax4_pdf.set_ylabel("波峰相对光强")
+        ax4_pdf.legend()
+        fig4_pdf.tight_layout()
+        fig4_pdf.savefig("temp_fig4.png", dpi=150, bbox_inches='tight')
+        plt.close(fig4_pdf) # 释放内存
+
+        # --- 开始排版 PDF ---
         pdf = FPDF()
         pdf.add_page()
-        pdf.add_font("SimHei", "", "SimHei.ttf", uni=True) # 使用平台已下载好的中文字体
+        pdf.add_font("SimHei", "", "SimHei.ttf", uni=True) 
         
-        # 报告页眉大标题
         pdf.set_font("SimHei", size=18)
         pdf.cell(0, 15, txt="超声波干涉与声速空间数字分析实验报告", ln=True, align="C")
         pdf.set_font("SimHei", size=12)
         pdf.cell(0, 8, txt="-"*65, ln=True, align="C")
-        pdf.cell(0, 8, txt="", ln=True)
+        pdf.cell(0, 5, txt="", ln=True)
         
-        # 第一部分：系统基准提取
+        # 第一部分：数据记录
         pdf.set_font("SimHei", size=14)
         pdf.cell(0, 10, txt="一、 系统视觉提取与核心算法基准数据", ln=True)
         pdf.set_font("SimHei", size=12)
@@ -436,9 +463,9 @@ if uploaded_file is not None:
         pdf.cell(0, 8, txt=f"  - 探头发射频率 f: {frequency_hz} Hz", ln=True)
         pdf.cell(0, 8, txt=f"  - 多点均值法测量波长 λ: {wavelength_mm:.2f} mm", ln=True)
         pdf.cell(0, 8, txt=f"  - 算法推荐理论声速 v: {sound_speed_m_s:.2f} m/s", ln=True)
-        pdf.cell(0, 8, txt="", ln=True)
+        pdf.cell(0, 5, txt="", ln=True)
         
-        # 第二部分：自主测算部分
+        # 第二部分：自主测算
         pdf.set_font("SimHei", size=14)
         pdf.cell(0, 10, txt="二、 学生自主读图探究结果记录", ln=True)
         pdf.set_font("SimHei", size=12)
@@ -448,19 +475,39 @@ if uploaded_file is not None:
             pdf.cell(0, 8, txt=f"  - 测算结果相对误差: {error_percent:.2f}%", ln=True)
         else:
             pdf.cell(0, 8, txt="  - （学生尚未在平台上输入自主测算数据）", ln=True)
-        pdf.cell(0, 8, txt="", ln=True)
+        pdf.cell(0, 5, txt="", ln=True)
             
-        # 第三部分：智能综合评语
+        # 第三部分：评语
         pdf.set_font("SimHei", size=14)
         pdf.cell(0, 10, txt="三、 探究表现智能评估反馈", ln=True)
         pdf.set_font("SimHei", size=12)
         pdf.multi_cell(0, 8, txt=f"  {eval_text}")
+        pdf.cell(0, 5, txt="", ln=True)
+
+        # 第四部分：四宫格附录图像
+        pdf.add_page() # 新起一页，防止图文错乱
+        pdf.set_font("SimHei", size=14)
+        pdf.cell(0, 10, txt="四、 实验过程物理图像与数据拟合档案", ln=True)
+        pdf.cell(0, 5, txt="", ln=True)
+
+        # 把刚才后台生成的四张图片按照2x2宫格贴到 PDF 里
+        y_curr = pdf.get_y()
+        pdf.image("temp_fig1.png", x=10, y=y_curr, w=90)
+        pdf.image("temp_fig2.png", x=105, y=y_curr, w=90)
+
+        pdf.set_y(y_curr + 70) 
+        pdf.image("temp_fig3.png", x=10, y=pdf.get_y(), w=90)
+        pdf.image("temp_fig4.png", x=105, y=pdf.get_y(), w=90)
         
-        # 转换为字节流构建下载按钮
         pdf_bytes = bytes(pdf.output())
         
+        # 用完图片后立刻清理，不占用服务器内存空间
+        for f in ["temp_fig1.png", "temp_fig2.png", "temp_fig3.png", "temp_fig4.png"]:
+            if os.path.exists(f):
+                os.remove(f)
+        
         st.download_button(
-            label="⬇️ 一键生成并下载 PDF 实验报告",
+            label="⬇️ 一键生成并下载图文并茂的 PDF 实验报告",
             data=pdf_bytes,
             file_name="超声波测声速_数字分析实验报告.pdf",
             mime="application/pdf"
