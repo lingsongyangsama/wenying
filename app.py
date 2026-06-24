@@ -8,10 +8,11 @@ import os
 import urllib.request
 from matplotlib import font_manager
 import plotly.graph_objects as go
-import pandas as pd
 
 # ================= 网页基础配置 =================
 st.set_page_config(page_title="超声波物理特征数字分析平台", layout="wide")
+st.title("🌊 超声波干涉与传播空间高级分析系统")
+st.markdown("基于单镜离轴纹影系统与机器视觉，探究超声波的波阵面、声速及能量耗散规律。")
 
 # ================= 字体乱码终极修复 (强制云端加载中文字体) =================
 @st.cache_resource
@@ -26,109 +27,113 @@ def load_chinese_font():
 
 load_chinese_font()
 
-# ================= 侧边栏：参数与 ROI 设置 =================
+# 侧边栏：参数设置
 st.sidebar.header("⚙️ 实验参数设置")
 real_diameter_mm = st.sidebar.number_input("凹面镜视场真实直径 (mm)", value=203.0, step=1.0)
 frequency_hz = st.sidebar.number_input("超声波发射频率 (Hz)", value=40000.0, step=100.0)
 
-st.sidebar.markdown("---")
-st.sidebar.header("📐 分析区域设置")
-st.sidebar.caption("提示：避开边缘气流干扰，框选纯净波纹区")
-analysis_range = st.sidebar.slider("水平采样区域 (%)", 0, 100, (15, 85))
+# ================= 原理介绍与光路仿真 =================
+st.markdown("---")
+st.header("🔬 纹影成像原理与光路仿真")
 
-# ================= 1. 沉浸式开场与情境引入 =================
-st.title("🌊 超声波干涉与传播空间高级分析系统")
-st.markdown("<p style='font-size: 1.2rem; color: #64748B; margin-bottom: 2rem;'>打破视觉极限，基于单镜离轴纹影系统与机器视觉，探究超声波的波阵面、声速及能量耗散规律。</p>", unsafe_allow_html=True)
+st.markdown("### 为什么能“看见”声波？")
+st.markdown("""
+超声波在空气中传播时，本质上是空气分子的纵向振动，这会导致空间中产生周期性的**疏密变化**。
 
-st.info("**💡 探究引言：** 声音，真的只能听，不能看吗？今天，我们将借助精密的光学系统，给空气“戴上透视镜”，将肉眼无法看见的微小气压波动，转化为可被测量和计算的数字图像。")
+根据格拉德斯通-戴尔定律 (Gladstone-Dale relation)，气体的折射率 $n$ 与其密度 $\\rho$ 成正比：
+$$n - 1 = K \\rho$$
 
-# ================= 2. 课前预测环节 (POE 策略) =================
-st.markdown("### ❓ 课前预测：波的形态与能量")
-prediction = st.radio(
-    "在正式处理实验数据前，请思考：当高频超声波在开阔空间自由传播时，其能量（振幅）会如何变化？",
-    ["A. 能量不会衰减，保持恒定", "B. 随传播距离呈线性匀速减小", "C. 随距离呈非线性（如指数或倒数）规律衰减"],
-    index=None
+当平行光束穿过测试区域时，由于超声波波阵面（波腹与波节）处的折射率 $n$ 不同，光线会发生微小的偏折（折射）。
+
+在**单镜离轴纹影光路**中，我们在反射光束的焦点处放置了一个**切光刀片 (Knife-edge)**：
+* **未偏折的光线**：被刀片精准阻挡（或部分阻挡）。
+* **偏折的光线**：若向上偏折则越过刀片，在相机中形成**亮区**；若向下偏折则被刀片完全遮挡，形成**暗区**。
+
+由此，我们将肉眼无法看见的**相位差**（折射率变化），完美转化为了相机可以捕捉的**振幅差**（光强明暗变化）。
+""")
+
+st.markdown("### 单镜离轴纹影光路示意图")
+fig_optics = go.Figure()
+
+# 锁定比例，禁止异常缩放，隐藏坐标轴
+fig_optics.update_xaxes(visible=False, range=[-320, 260], showgrid=False, zeroline=False)
+fig_optics.update_yaxes(visible=False, range=[-130, 130], showgrid=False, zeroline=False, scaleanchor="x", scaleratio=1)
+
+# 光学节点坐标设定
+source_x, source_y = -180, 40
+knife_x, knife_y = -180, -40
+mirror_r = 250
+# 【修复核心】：定义真实球面镜的曲率中心，确保边缘向左侧光源凹陷
+center_of_curvature = 200 - mirror_r 
+
+# --- 绘制线条与光路 ---
+# 1. 绘制光轴
+fig_optics.add_trace(go.Scatter(x=[-300, 240], y=[0, 0], mode='lines', line=dict(color='#CBD5E1', width=2, dash='dash'), hoverinfo='skip'))
+fig_optics.add_annotation(x=250, y=0, text="光轴", showarrow=False, font=dict(color="gray"))
+
+# 2. 绘制紫色对称虚线
+fig_optics.add_trace(go.Scatter(x=[source_x, -180, knife_x], y=[source_y, 0, knife_y], mode='lines', line=dict(color='purple', width=2, dash='dot'), hoverinfo='skip'))
+fig_optics.add_annotation(x=-120, y=0, text="关于光轴离轴对称", showarrow=False, font=dict(color="purple", size=12))
+
+# 3. 绘制测试区域
+fig_optics.add_shape(type="rect", x0=0, y0=-90, x1=150, y1=90, line=dict(color="#94A3B8", dash="dash", width=2), fillcolor="rgba(0,0,0,0)")
+fig_optics.add_annotation(x=75, y=105, text="<b>测试区域</b>", showarrow=False, font=dict(size=14))
+fig_optics.add_annotation(x=75, y=-105, text="紧靠反射镜正前方", showarrow=False, font=dict(size=10, color="gray"))
+
+# 4. 绘制光路 (发散 -> 反射 -> 汇聚)
+rays_y = [80, 0, -80] 
+for ry in rays_y:
+    # 严格按照球面方程计算反射点坐标，形成真实凹面反射
+    rx = center_of_curvature + mirror_r * np.cos(np.arcsin(ry/mirror_r))
+    # 入射浅蓝光束
+    fig_optics.add_trace(go.Scatter(x=[source_x, rx], y=[source_y, ry], mode='lines', line=dict(color='#60A5FA', width=1.5), hoverinfo='skip'))
+    # 反射深蓝光束
+    fig_optics.add_trace(go.Scatter(x=[rx, knife_x], y=[ry, knife_y], mode='lines', line=dict(color='#2563EB', width=1.5), hoverinfo='skip'))
+    # 穿过焦点进入相机的光线
+    fig_optics.add_trace(go.Scatter(x=[knife_x, knife_x - 70], y=[knife_y, knife_y - (ry-knife_y)*(70/(rx-knife_x))], mode='lines', line=dict(color='#2563EB', width=1.5), hoverinfo='skip'))
+
+# --- 绘制实体硬件 ---
+# 1. 凹面反射镜 (使用严谨的左凹球面方程)
+theta = np.linspace(-0.45, 0.45, 50)
+mirror_x = center_of_curvature + mirror_r * np.cos(theta)
+mirror_y = mirror_r * np.sin(theta)
+fig_optics.add_trace(go.Scatter(x=mirror_x, y=mirror_y, mode='lines', line=dict(color='#93C5FD', width=8), hoverinfo='skip'))
+# 镜面中心红十字
+fig_optics.add_trace(go.Scatter(x=[200], y=[0], mode='markers', marker=dict(color='red', symbol='cross', size=10), hoverinfo='skip'))
+
+# 2. 硬件黑色方块 (光源、刀片、相机)
+fig_optics.add_shape(type="rect", x0=-230, y0=25, x1=-190, y1=55, fillcolor="#334155", line_width=0, layer="below") 
+fig_optics.add_shape(type="rect", x0=-200, y0=-100, x1=-185, y1=-42, fillcolor="#1E293B", line_width=0, layer="below") 
+fig_optics.add_shape(type="rect", x0=-290, y0=-60, x1=-250, y1=-20, fillcolor="#1E293B", line_width=0, layer="below")
+# 镜头三角示意
+fig_optics.add_shape(type="path", path=f"M -250 -30 L -230 -20 L -230 -60 L -250 -50 Z", fillcolor="#94A3B8", line_width=0, layer="below")
+
+# 3. 添加红点 (光源出口点与反射像点)
+fig_optics.add_trace(go.Scatter(x=[source_x, knife_x], y=[source_y, knife_y], mode='markers', marker=dict(color='red', size=12, line=dict(color='rgba(255,0,0,0.3)', width=4)), hoverinfo='skip'))
+
+# --- 添加文字标注 ---
+fig_optics.add_annotation(x=-180, y=70, text="<b>点光源</b><br><span style='font-size:10px; color:gray'>光源出口</span>", showarrow=False, align="left")
+fig_optics.add_annotation(x=-150, y=-60, text="<b>切光刀片</b><br><span style='font-size:10px; color:gray'>置于反射像点处</span>", showarrow=False, align="left")
+fig_optics.add_annotation(x=-270, y=-80, text="<b>相机</b>", showarrow=False)
+fig_optics.add_annotation(x=260, y=50, text="<b>凹面反射镜</b><br><span style='font-size:10px; color:gray'>镜面中心位于光轴</span>", showarrow=False, align="left")
+
+# 底部距离标注线
+fig_optics.add_shape(type="line", x0=-180, y0=-120, x1=200, y1=-120, line=dict(color="#475569", width=2))
+fig_optics.add_annotation(x=-180, y=-120, text="◀", showarrow=False, font=dict(color="#475569"))
+fig_optics.add_annotation(x=200, y=-120, text="▶", showarrow=False, font=dict(color="#475569"))
+fig_optics.add_annotation(x=10, y=-120, text="<b> 光源出口至镜面中心：2f </b>", showarrow=False, bgcolor="white", bordercolor="#475569", borderwidth=1, borderpad=4, font=dict(size=12))
+
+# 隐藏所有图例，禁止拖拽模式
+fig_optics.update_layout(
+    showlegend=False,
+    dragmode=False,       
+    hovermode=False,     
+    margin=dict(l=0, r=0, t=20, b=0),
+    height=500,
+    plot_bgcolor='rgba(0,0,0,0)'
 )
 
-if prediction:
-    st.success("✨ 你的预测已记录！探究的第一步已经完成。请在下方展开原理或直接上传拍摄到的图像，让真实的数据来验证你的猜想。")
-
-st.markdown("---")
-
-# ================= 3. 折叠面板：收纳硬核原理 =================
-with st.expander("📖 点击展开：我们是如何“看见”声波的？（纹影成像原理与光路仿真）"):
-    col_text, col_sim = st.columns([1, 1.2])
-    
-    with col_text:
-        st.markdown("#### 核心物理机制")
-        st.markdown("""
-        超声波在空气中传播时，本质上是空气分子的纵向振动，导致空间中产生周期性的**疏密变化**。
-        
-        根据格拉德斯通-戴尔定律，气体的折射率 $n$ 与其密度 $\\rho$ 成正比：$n - 1 = K \\rho$
-        
-        当平行光束穿过超声波场时，由于波阵面（波腹与波节）的折射率不同，光线发生微小偏折。
-        
-        在**单镜离轴纹影光路**中，我们在反射光束焦点处放置了**切光刀片 (Knife-edge)**：
-        * **未偏折光线**：被刀片精准阻挡。
-        * **偏折光线**：向上偏折则越过刀片形成**亮区**；向下偏折被遮挡形成**暗区**。
-        
-        由此，我们将无法看见的**相位差**（折射率变化），转化为了相机可捕捉的**振幅差**（明暗变化）。
-        """)
-        
-    with col_sim:
-        st.markdown("#### 单镜离轴纹影光路示意图")
-        fig_optics = go.Figure()
-        fig_optics.update_xaxes(visible=False, range=[-320, 260], showgrid=False, zeroline=False)
-        fig_optics.update_yaxes(visible=False, range=[-130, 130], showgrid=False, zeroline=False, scaleanchor="x", scaleratio=1)
-
-        source_x, source_y = -180, 40
-        knife_x, knife_y = -180, -40
-        mirror_r = 250
-        center_of_curvature = 200 - mirror_r 
-
-        # 绘制光轴与对称线
-        fig_optics.add_trace(go.Scatter(x=[-300, 240], y=[0, 0], mode='lines', line=dict(color='#CBD5E1', width=2, dash='dash'), hoverinfo='skip'))
-        fig_optics.add_annotation(x=250, y=0, text="光轴", showarrow=False, font=dict(color="gray"))
-        fig_optics.add_trace(go.Scatter(x=[source_x, -180, knife_x], y=[source_y, 0, knife_y], mode='lines', line=dict(color='purple', width=2, dash='dot'), hoverinfo='skip'))
-        fig_optics.add_annotation(x=-120, y=0, text="关于光轴离轴对称", showarrow=False, font=dict(color="purple", size=12))
-
-        # 测试区域
-        fig_optics.add_shape(type="rect", x0=0, y0=-90, x1=150, y1=90, line=dict(color="#94A3B8", dash="dash", width=2), fillcolor="rgba(0,0,0,0)")
-        fig_optics.add_annotation(x=75, y=105, text="<b>测试区域</b>", showarrow=False, font=dict(size=14))
-
-        # 光路
-        rays_y = [80, 0, -80] 
-        for ry in rays_y:
-            rx = center_of_curvature + mirror_r * np.cos(np.arcsin(ry/mirror_r))
-            fig_optics.add_trace(go.Scatter(x=[source_x, rx], y=[source_y, ry], mode='lines', line=dict(color='#60A5FA', width=1.5), hoverinfo='skip'))
-            fig_optics.add_trace(go.Scatter(x=[rx, knife_x], y=[ry, knife_y], mode='lines', line=dict(color='#2563EB', width=1.5), hoverinfo='skip'))
-            fig_optics.add_trace(go.Scatter(x=[knife_x, knife_x - 70], y=[knife_y, knife_y - (ry-knife_y)*(70/(rx-knife_x))], mode='lines', line=dict(color='#2563EB', width=1.5), hoverinfo='skip'))
-
-        # 硬件实体
-        theta = np.linspace(-0.45, 0.45, 50)
-        mirror_x = center_of_curvature + mirror_r * np.cos(theta)
-        mirror_y = mirror_r * np.sin(theta)
-        fig_optics.add_trace(go.Scatter(x=mirror_x, y=mirror_y, mode='lines', line=dict(color='#93C5FD', width=8), hoverinfo='skip'))
-        fig_optics.add_trace(go.Scatter(x=[200], y=[0], mode='markers', marker=dict(color='red', symbol='cross', size=10), hoverinfo='skip'))
-
-        fig_optics.add_shape(type="rect", x0=-230, y0=25, x1=-190, y1=55, fillcolor="#334155", line_width=0, layer="below") 
-        fig_optics.add_shape(type="rect", x0=-200, y0=-100, x1=-185, y1=-42, fillcolor="#1E293B", line_width=0, layer="below") 
-        fig_optics.add_shape(type="rect", x0=-290, y0=-60, x1=-250, y1=-20, fillcolor="#1E293B", line_width=0, layer="below")
-        fig_optics.add_shape(type="path", path=f"M -250 -30 L -230 -20 L -230 -60 L -250 -50 Z", fillcolor="#94A3B8", line_width=0, layer="below")
-        fig_optics.add_trace(go.Scatter(x=[source_x, knife_x], y=[source_y, knife_y], mode='markers', marker=dict(color='red', size=12, line=dict(color='rgba(255,0,0,0.3)', width=4)), hoverinfo='skip'))
-
-        # 标注
-        fig_optics.add_annotation(x=-180, y=70, text="<b>点光源</b>", showarrow=False, align="left")
-        fig_optics.add_annotation(x=-150, y=-60, text="<b>切光刀片</b>", showarrow=False, align="left")
-        fig_optics.add_annotation(x=-270, y=-80, text="<b>相机</b>", showarrow=False)
-        fig_optics.add_annotation(x=260, y=50, text="<b>凹面镜</b>", showarrow=False, align="left")
-
-        fig_optics.add_shape(type="line", x0=-180, y0=-120, x1=200, y1=-120, line=dict(color="#475569", width=2))
-        fig_optics.add_annotation(x=10, y=-120, text="<b> 光源至镜面中心：2f </b>", showarrow=False, bgcolor="white", bordercolor="#475569", borderwidth=1, borderpad=4, font=dict(size=12))
-
-        fig_optics.update_layout(showlegend=False, dragmode=False, hovermode=False, margin=dict(l=0, r=0, t=20, b=0), height=400)
-        st.plotly_chart(fig_optics, use_container_width=True, config={'displayModeBar': False})
-
+st.plotly_chart(fig_optics, use_container_width=True, config={'displayModeBar': False})
 st.markdown("---")
 
 # ================= 核心物理模型 =================
@@ -146,89 +151,89 @@ def calc_circle_center(p1, p2, p3):
     cy = ((p1[0] - p2[0])*cd - (p2[0] - p3[0])*bc) / det
     return (cx, cy)
 
-# ================= 4. 实验数据上传与解析 =================
-st.header("📂 实验数据提取与反演")
-uploaded_file = st.file_uploader("请在此处上传您拍摄的超声波干涉截图 (JPG/PNG)", type=['jpg', 'png', 'jpeg'])
+# ================= 文件上传模块 =================
+st.header("📂 实验数据上传与解析")
+uploaded_file = st.file_uploader("请在此处上传实验截图 (支持 JPG/PNG)", type=['jpg', 'png', 'jpeg'])
 
 if uploaded_file is not None:
     file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
     image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
     
-    with st.spinner('引擎正在进行深度机器视觉解析...'):
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-        enhanced_gray = clahe.apply(gray)
+    st.success("图像加载成功！正在进行深度物理特征解析...")
+    
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+    enhanced_gray = clahe.apply(gray)
 
-        # 1. 物理比例尺
-        _, thresh = cv2.threshold(gray, 30, 255, cv2.THRESH_BINARY)
-        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        if contours:
-            main_contour = max(contours, key=cv2.contourArea)
-            x, y, w, h = cv2.boundingRect(main_contour)
-            mm_per_pixel = real_diameter_mm / max(w, h)
-        else:
-            st.error("无法识别圆形视场，请检查图像清晰度。")
-            st.stop()
+    # 1. 物理比例尺
+    _, thresh = cv2.threshold(gray, 30, 255, cv2.THRESH_BINARY)
+    contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if contours:
+        main_contour = max(contours, key=cv2.contourArea)
+        x, y, w, h = cv2.boundingRect(main_contour)
+        mm_per_pixel = real_diameter_mm / max(w, h)
+    else:
+        st.error("无法识别圆形视场，请检查图像清晰度。")
+        st.stop()
 
-        # 2. 空间提取 (根据侧边栏滑动条动态调整)
-        center_y = y + h // 2
-        offset = 40 
-        line_start_x = x + int(w * (analysis_range[0] / 100.0))
-        line_end_x = x + int(w * (analysis_range[1] / 100.0))
+    # 2. 空间提取
+    center_y = y + h // 2
+    offset = 40 
+    line_start_x = x + int(w * 0.15)
+    line_end_x = x + int(w * 0.85)
 
-        def extract_and_find_peaks(y_coord):
-            profile = np.mean(enhanced_gray[y_coord - 5 : y_coord + 5, line_start_x:line_end_x], axis=0)
-            smooth = savgol_filter(profile, window_length=31, polyorder=3)
-            peaks, _ = find_peaks(smooth, distance=(w//30)*0.5, prominence=3)
-            return smooth, peaks + line_start_x
+    def extract_and_find_peaks(y_coord):
+        profile = np.mean(enhanced_gray[y_coord - 5 : y_coord + 5, line_start_x:line_end_x], axis=0)
+        smooth = savgol_filter(profile, window_length=31, polyorder=3)
+        peaks, _ = find_peaks(smooth, distance=(w//30)*0.5, prominence=3)
+        return smooth, peaks + line_start_x
 
-        profile_center, peaks_center = extract_and_find_peaks(center_y)
-        _, peaks_top = extract_and_find_peaks(center_y - offset)
-        _, peaks_bottom = extract_and_find_peaks(center_y + offset)
+    profile_center, peaks_center = extract_and_find_peaks(center_y)
+    _, peaks_top = extract_and_find_peaks(center_y - offset)
+    _, peaks_bottom = extract_and_find_peaks(center_y + offset)
 
-        # 3. 声源反推
-        calculated_centers_x = []
-        calculated_centers_y = []
-        for px in peaks_center:
-            top_match = [p for p in peaks_top if abs(p - px) < 20]
-            bottom_match = [p for p in peaks_bottom if abs(p - px) < 20]
-            if top_match and bottom_match:
-                pt_center = (px, center_y)
-                pt_top = (top_match[0], center_y - offset)
-                pt_bottom = (bottom_match[0], center_y + offset)
-                center = calc_circle_center(pt_top, pt_center, pt_bottom)
-                if center and center[0] > center_y and center[0] < image.shape[1] + 500:
-                    calculated_centers_x.append(center[0])
-                    calculated_centers_y.append(center[1])
-                    
-        source_x = np.median(calculated_centers_x) if calculated_centers_x else image.shape[1]
-        source_y = np.median(calculated_centers_y) if calculated_centers_y else center_y
+    # 3. 声源反推
+    calculated_centers_x = []
+    calculated_centers_y = []
+    for px in peaks_center:
+        top_match = [p for p in peaks_top if abs(p - px) < 20]
+        bottom_match = [p for p in peaks_bottom if abs(p - px) < 20]
+        if top_match and bottom_match:
+            pt_center = (px, center_y)
+            pt_top = (top_match[0], center_y - offset)
+            pt_bottom = (bottom_match[0], center_y + offset)
+            center = calc_circle_center(pt_top, pt_center, pt_bottom)
+            if center and center[0] > center_y and center[0] < image.shape[1] + 500:
+                calculated_centers_x.append(center[0])
+                calculated_centers_y.append(center[1])
+                
+    source_x = np.median(calculated_centers_x) if calculated_centers_x else image.shape[1]
+    source_y = np.median(calculated_centers_y) if calculated_centers_y else center_y
 
-        # 4. 波长与声速
-        if len(peaks_center) > 1:
-            radial_distances = np.sqrt((peaks_center - source_x)**2 + (center_y - source_y)**2)
-            avg_pixel_dist = np.mean(np.abs(np.diff(radial_distances)))
-            wavelength_mm = avg_pixel_dist * mm_per_pixel
-            sound_speed_m_s = frequency_hz * (wavelength_mm / 1000.0)
-        else:
-            wavelength_mm, sound_speed_m_s = 0, 0
+    # 4. 波长与声速
+    if len(peaks_center) > 1:
+        radial_distances = np.sqrt((peaks_center - source_x)**2 + (center_y - source_y)**2)
+        avg_pixel_dist = np.mean(np.abs(np.diff(radial_distances)))
+        wavelength_mm = avg_pixel_dist * mm_per_pixel
+        sound_speed_m_s = frequency_hz * (wavelength_mm / 1000.0)
+    else:
+        wavelength_mm, sound_speed_m_s = 0, 0
 
-        # 5. 衰减拟合
-        x_axis = np.arange(line_start_x, line_end_x)
-        peak_x_coords = peaks_center
-        peak_intensities = profile_center[peaks_center - line_start_x]
-        peak_radial_distances = np.sqrt((peak_x_coords - source_x)**2 + (center_y - source_y)**2)
-        
-        try:
-            p0 = [np.max(peak_intensities) * np.sqrt(np.min(peak_radial_distances)), 0.001, np.min(peak_intensities)]
-            popt, _ = curve_fit(realistic_decay, peak_radial_distances, peak_intensities, p0=p0, maxfev=5000)
-            fit_success = True
-        except:
-            fit_success = False
-
-    st.success("✅ 数据提取与理论拟合完成！结果如下：")
+    # 5. 衰减拟合
+    x_axis = np.arange(line_start_x, line_end_x)
+    peak_x_coords = peaks_center
+    peak_intensities = profile_center[peaks_center - line_start_x]
+    peak_radial_distances = np.sqrt((peak_x_coords - source_x)**2 + (center_y - source_y)**2)
+    
+    try:
+        p0 = [np.max(peak_intensities) * np.sqrt(np.min(peak_radial_distances)), 0.001, np.min(peak_intensities)]
+        popt, _ = curve_fit(realistic_decay, peak_radial_distances, peak_intensities, p0=p0, maxfev=5000)
+        fit_success = True
+    except:
+        fit_success = False
 
     # ================= 渲染网页图表 =================
+    
     st.subheader("📊 核心数据空间提取与拟合")
     fig1, axs1 = plt.subplots(2, 2, figsize=(16, 12))
 
@@ -314,28 +319,12 @@ if uploaded_file is not None:
         ax_fft.axvline(center_fft_x, color='white', linestyle='--', alpha=0.3)
         st.pyplot(fig_fft)
 
-    # 核心数据与导出功能
+    # 核心数据展示
     st.markdown("---")
-    st.subheader("💡 定量计算结果与数据导出")
-    
-    col_metric1, col_metric2, col_download = st.columns([1, 1, 1])
-    col_metric1.metric("实测超声波波长 (λ)", f"{wavelength_mm:.2f} mm")
-    col_metric2.metric("推算空气声速 (v)", f"{sound_speed_m_s:.2f} m/s")
-    
-    with col_download:
-        st.write("") # 占位对齐
-        df = pd.DataFrame({
-            '径向距离_像素': peak_radial_distances,
-            '相对声压_灰度': peak_intensities
-        })
-        csv = df.to_csv(index=False).encode('utf-8-sig')
-        st.download_button(
-            label="📥 下载原始波峰数据 (CSV)",
-            data=csv,
-            file_name='ultrasound_peaks_data.csv',
-            mime='text/csv',
-            help="下载提取出的距离与能量数据，可供学生使用 Excel 进行课后自主建模"
-        )
+    st.subheader("💡 定量计算结果")
+    col1, col2 = st.columns(2)
+    col1.metric("实测超声波波长 (λ)", f"{wavelength_mm:.2f} mm")
+    col2.metric("推算空气声速 (v)", f"{sound_speed_m_s:.2f} m/s")
 
 else:
-    st.info("👆 请在上方上传实际拍摄的纹影图像，系统将自动执行深度解析。")
+    st.info("💡 理论与光路已就绪。请在上方上传实际拍摄的纹影图像，系统将自动执行解析。")
