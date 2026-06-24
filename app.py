@@ -14,7 +14,7 @@ st.set_page_config(page_title="超声波物理特征数字分析平台", layout=
 st.title("🌊 超声波干涉与传播空间高级分析系统")
 st.markdown("基于单镜离轴纹影系统与机器视觉，探究超声波的波阵面、声速及能量耗散规律。")
 
-# ================= 字体乱码终极修复 (强制云端加载中文字体，增加容错) =================
+# ================= 字体乱码终极修复 =================
 @st.cache_resource
 def load_chinese_font():
     font_path = "SimHei.ttf"
@@ -25,7 +25,6 @@ def load_chinese_font():
             font_manager.fontManager.addfont(font_path)
             plt.rcParams['font.sans-serif'] = ['SimHei']
         except Exception as e:
-            # 下载失败时的容错处理，避免网页整体崩溃
             st.warning("⚠️ 中文字体下载失败，图表可能出现乱码。请检查网络或在本地放置 SimHei.ttf。")
     else:
         font_manager.fontManager.addfont(font_path)
@@ -39,16 +38,24 @@ st.sidebar.header("⚙️ 实验参数设置")
 real_diameter_mm = st.sidebar.number_input("凹面镜视场真实直径 (mm)", value=203.0, step=1.0)
 frequency_hz = st.sidebar.number_input("超声波发射频率 (Hz)", value=40000.0, step=100.0)
 
-# 新增：高级视觉参数（去硬编码）
+# 高级视觉参数（带通俗说明悬停提示）
 with st.sidebar.expander("🔧 高级视觉参数 (建议默认)"):
-    threshold_val = st.number_input("视场二值化阈值", min_value=0, max_value=255, value=30, step=1)
-    offset_val = st.number_input("辅助采样线偏移量 (像素)", min_value=10, max_value=200, value=40, step=5)
-    sg_window = st.number_input("平滑滤波窗口大小", min_value=5, max_value=101, value=31, step=2)
-    # 强制窗口大小为奇数
+    threshold_val = st.number_input(
+        "视场二值化阈值", min_value=0, max_value=255, value=30, step=1,
+        help="【找圆圈用的】调节这个数字，能帮电脑把‘圆形的镜面’从‘黑色的背景’中完整地抠出来。如果系统报错说没找到圆，试着微调一下它。"
+    )
+    offset_val = st.number_input(
+        "辅助采样线偏移量 (像素)", min_value=10, max_value=200, value=40, step=5,
+        help="【找声源用的】除了中间那条主线，我们还在上下各画了一条线来辅助定位。这个数值决定了上下两条线离中间有多远。"
+    )
+    sg_window = st.number_input(
+        "平滑滤波窗口大小", min_value=5, max_value=101, value=31, step=2,
+        help="【去噪点用的】照片上可能会有杂乱的‘雪花’。这个数字越大，电脑画出的波浪线就越平滑；但如果调得太大，可能会把真实的声波细节给抹平哦。"
+    )
     if sg_window % 2 == 0:
         sg_window += 1
 
-# ================= 原理介绍与光路仿真 (使用折叠面板优化体验) =================
+# ================= 原理介绍与光路仿真 =================
 st.markdown("---")
 with st.expander("🔬 纹影成像原理与光路仿真 (点击展开/折叠)", expanded=False):
     st.markdown("### 为什么能“看见”声波？")
@@ -70,17 +77,14 @@ with st.expander("🔬 纹影成像原理与光路仿真 (点击展开/折叠)",
     st.markdown("### 单镜离轴纹影光路示意图")
     fig_optics = go.Figure()
 
-    # 锁定比例，禁止异常缩放，隐藏坐标轴
     fig_optics.update_xaxes(visible=False, range=[-320, 260], showgrid=False, zeroline=False)
     fig_optics.update_yaxes(visible=False, range=[-130, 130], showgrid=False, zeroline=False, scaleanchor="x", scaleratio=1)
 
-    # 光学节点坐标设定
     source_x, source_y = -180, 40
     knife_x, knife_y = -180, -40
     mirror_r = 250
     center_of_curvature = 200 - mirror_r 
 
-    # --- 绘制线条与光路 ---
     fig_optics.add_trace(go.Scatter(x=[-300, 240], y=[0, 0], mode='lines', line=dict(color='#CBD5E1', width=2, dash='dash'), hoverinfo='skip'))
     fig_optics.add_annotation(x=250, y=0, text="光轴", showarrow=False, font=dict(color="gray"))
 
@@ -98,7 +102,6 @@ with st.expander("🔬 纹影成像原理与光路仿真 (点击展开/折叠)",
         fig_optics.add_trace(go.Scatter(x=[rx, knife_x], y=[ry, knife_y], mode='lines', line=dict(color='#2563EB', width=1.5), hoverinfo='skip'))
         fig_optics.add_trace(go.Scatter(x=[knife_x, knife_x - 70], y=[knife_y, knife_y - (ry-knife_y)*(70/(rx-knife_x))], mode='lines', line=dict(color='#2563EB', width=1.5), hoverinfo='skip'))
 
-    # --- 绘制实体硬件 ---
     theta = np.linspace(-0.45, 0.45, 50)
     mirror_x = center_of_curvature + mirror_r * np.cos(theta)
     mirror_y = mirror_r * np.sin(theta)
@@ -126,7 +129,6 @@ with st.expander("🔬 纹影成像原理与光路仿真 (点击展开/折叠)",
         showlegend=False, dragmode=False, hovermode=False, 
         margin=dict(l=0, r=0, t=20, b=0), height=500, plot_bgcolor='rgba(0,0,0,0)'
     )
-
     st.plotly_chart(fig_optics, use_container_width=True, config={'displayModeBar': False})
 
 # ================= 核心物理模型 =================
@@ -144,12 +146,24 @@ def calc_circle_center(p1, p2, p3):
     cy = ((p1[0] - p2[0])*cd - (p2[0] - p3[0])*bc) / det
     return (cx, cy)
 
-# ================= 文件上传模块 =================
+# ================= 文件上传与示例模块 =================
 st.header("📂 实验数据上传与解析")
+
+# 示例图片下载功能
+if os.path.exists("example.jpg"):
+    with open("example.jpg", "rb") as file:
+        st.download_button(
+            label="📥 点击下载示例纹影图像用于测试",
+            data=file,
+            file_name="example.jpg",
+            mime="image/jpeg"
+        )
+else:
+    st.info("💡 提示：您可以将上课拍摄的清晰图片重命名为 `example.jpg` 并存放在代码同级目录下，系统会自动在此处生成供学生下载的按钮。")
+
 uploaded_file = st.file_uploader("请在此处上传实验截图 (支持 JPG/PNG)", type=['jpg', 'png', 'jpeg'])
 
 if uploaded_file is not None:
-    # 新增：加载动画，缓解等待焦虑
     with st.spinner("正在进行深度物理特征解析，请稍候..."):
         file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
         image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
@@ -160,7 +174,7 @@ if uploaded_file is not None:
         clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
         enhanced_gray = clahe.apply(gray)
 
-        # 1. 物理比例尺 (使用侧边栏设定的阈值)
+        # 1. 物理比例尺
         _, thresh = cv2.threshold(gray, threshold_val, 255, cv2.THRESH_BINARY)
         contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         if contours:
@@ -177,10 +191,8 @@ if uploaded_file is not None:
         line_end_x = x + int(w * 0.85)
 
         def extract_and_find_peaks(y_coord):
-            # 增加越界保护
             y_safe = np.clip(y_coord, 5, enhanced_gray.shape[0] - 6)
             profile = np.mean(enhanced_gray[y_safe - 5 : y_safe + 5, line_start_x:line_end_x], axis=0)
-            # 使用侧边栏设定的滤波窗口
             smooth = savgol_filter(profile, window_length=int(sg_window), polyorder=3)
             peaks, _ = find_peaks(smooth, distance=(w//30)*0.5, prominence=3)
             return smooth, peaks + line_start_x
@@ -226,20 +238,17 @@ if uploaded_file is not None:
             p0 = [np.max(peak_intensities) * np.sqrt(np.min(peak_radial_distances)), 0.001, np.min(peak_intensities)]
             popt, _ = curve_fit(realistic_decay, peak_radial_distances, peak_intensities, p0=p0, maxfev=5000)
             fit_success = True
-        except RuntimeError: # 修改点：更严格的异常捕获
+        except RuntimeError: 
             fit_success = False
         except Exception:
             fit_success = False
 
-    # ================= 渲染网页图表 (使用多栏布局与 Plotly) =================
-    
+    # ================= 渲染网页图表 =================
     st.subheader("📊 核心数据空间提取与拟合")
     
-    # 构建 2x2 布局
     row1_col1, row1_col2 = st.columns(2)
     row2_col1, row2_col2 = st.columns(2)
 
-    # 图1：保留 Matplotlib 以方便绘制底图和辅助线
     with row1_col1:
         fig1, ax1 = plt.subplots(figsize=(6, 4))
         ax1.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
@@ -250,8 +259,9 @@ if uploaded_file is not None:
         ax1.set_title('图1: 三线空间采样与波阵面提取', fontsize=12, fontweight='bold')
         ax1.axis('off')
         st.pyplot(fig1)
+        with st.expander("💡 老师说：图1在干嘛？"):
+            st.markdown("你看照片上的明暗条纹，那就是超声波！电脑在画面上‘拉’了三条横线，去感受哪里最亮（波腹）。**红点**就是电脑准确抓到的每一个声波波峰的位置。")
 
-    # 图2：改用 Plotly 以支持悬停交互
     with row1_col2:
         fig2 = go.Figure()
         fig2.add_trace(go.Scatter(x=x_axis, y=profile_center, mode='lines', name='灰度剖面', line=dict(color='black', width=1.5)))
@@ -263,8 +273,9 @@ if uploaded_file is not None:
             hovermode="x unified"
         )
         st.plotly_chart(fig2, use_container_width=True)
+        with st.expander("💡 老师说：图2怎么看？"):
+            st.markdown("这是把图1中间那条线的光强变化‘画’成了波浪线。两个红色叉叉之间的距离，在物理上就代表了一个**波长**！利用波长和已知的频率，我们就能算出声音传播的速度了。")
 
-    # 图3：保留 Matplotlib
     with row2_col1:
         fig3, ax3 = plt.subplots(figsize=(6, 4))
         ax3.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
@@ -276,8 +287,9 @@ if uploaded_file is not None:
         ax3.set_title('图3: 二维同心圆反向声源定位', fontsize=12, fontweight='bold')
         ax3.axis('off')
         st.pyplot(fig3)
+        with st.expander("💡 老师说：图3的同心圆代表什么？"):
+            st.markdown("想象一下往水池里扔一颗石子，波纹是一圈圈扩散的。根据图1里上下中三个红点的位置，电脑利用几何知识（三点确定一个圆），像侦探一样**反向推算**出了发射超声波的探头（红星位置）到底藏在画面外面的哪里！")
 
-    # 图4：改用 Plotly 支持交互
     with row2_col2:
         fig4 = go.Figure()
         fig4.add_trace(go.Scatter(x=peak_radial_distances, y=peak_intensities, mode='markers', name='实测峰值', marker=dict(color='blue', size=8)))
@@ -291,6 +303,8 @@ if uploaded_file is not None:
             hovermode="closest"
         )
         st.plotly_chart(fig4, use_container_width=True)
+        with st.expander("💡 老师说：声音是怎么变弱的？"):
+            st.markdown("常识告诉我们，离得越远，声音越小。图上的蓝点是我们真实测到的声音能量，红线是物理学家通过数学公式算出来的理论衰减曲线。你可以看看，我们实测的数据跟科学家的理论吻合得漂不漂亮！")
     
     # --- 高阶教学可视化 (3D & FFT) ---
     st.markdown("---")
@@ -351,4 +365,4 @@ if uploaded_file is not None:
     col2.metric("推算空气声速 (v)", f"{sound_speed_m_s:.2f} m/s")
 
 else:
-    st.info("💡 理论与光路已就绪。请在上方上传实际拍摄的纹影图像，系统将自动执行解析。")
+    st.info("💡 期待您的探索！请在上方上传实际拍摄的纹影图像，系统将自动执行解析。")
