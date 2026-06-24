@@ -260,7 +260,7 @@ if uploaded_file is not None:
         ax1.axis('off')
         fig1.tight_layout(pad=0)
         st.pyplot(fig1)
-        with st.expander("💡 图1在干嘛？"):
+        with st.expander("💡 老师说：图1在干嘛？"):
             st.markdown("你看照片上的明暗条纹，那就是超声波！电脑在画面上‘拉’了三条横线，去感受哪里最亮（波腹）。**红点**就是电脑准确抓到的每一个声波波峰的位置。")
 
     with row1_col2:
@@ -275,7 +275,7 @@ if uploaded_file is not None:
             hovermode="x unified"
         )
         st.plotly_chart(fig2, use_container_width=True)
-        with st.expander("💡 图2怎么看？"):
+        with st.expander("💡 老师说：图2怎么看？"):
             st.markdown("这是把图1中间那条线的光强变化‘画’成了波浪线。两个红色叉叉之间的距离，在物理上就代表了一个**波长**！利用波长和已知的频率，我们就能算出声音传播的速度了。")
 
     with row2_col1:
@@ -290,7 +290,7 @@ if uploaded_file is not None:
         ax3.axis('off')
         fig3.tight_layout(pad=0)
         st.pyplot(fig3)
-        with st.expander("💡 图3的同心圆代表什么？"):
+        with st.expander("💡 老师说：图3的同心圆代表什么？"):
             st.markdown("想象一下往水池里扔一颗石子，波纹是一圈圈扩散的。根据图1里上下中三个红点的位置，电脑利用几何知识（三点确定一个圆），像侦探一样**反向推算**出了发射超声波的探头（红星位置）到底藏在画面外面的哪里！")
 
     with row2_col2:
@@ -307,7 +307,7 @@ if uploaded_file is not None:
             hovermode="closest"
         )
         st.plotly_chart(fig4, use_container_width=True)
-        with st.expander("💡 声音是怎么变弱的？"):
+        with st.expander("💡 老师说：声音是怎么变弱的？"):
             st.markdown("常识告诉我们，离得越远，声音越小。图上的蓝点是我们真实测到的声音能量，红线是物理学家通过数学公式算出来的理论衰减曲线。你可以看看，我们实测的数据跟科学家的理论吻合得漂不漂亮！")
     
     # --- 高阶教学可视化 (3D & FFT) ---
@@ -363,8 +363,8 @@ if uploaded_file is not None:
 
     # ================= 互动教学：读图计算与结果核对 =================
     st.markdown("---")
-    st.subheader("🧠 探究挑战：根据图像算出声速")
-    st.markdown("利用上面的**图2**，你能自己算出空气中的声速吗？")
+    st.subheader("🧠 探究挑战：根据图像自己算出声速！")
+    st.markdown("真正的物理学家可不会只看现成的答案。利用上面的**图2**，你能自己算出空气中的声速吗？")
 
     col_guide, col_calc = st.columns([1.2, 1])
 
@@ -372,35 +372,31 @@ if uploaded_file is not None:
         st.info(f"**📝 计算指南与已知条件**\n\n"
                 f"1. **求像素距离**：把鼠标悬停在【图2】的波峰（红叉）上，读出相邻两个波峰的 X 坐标并相减，这就是一个波长包含的像素数。*(💡提示：为了减小误差，你可以读取相隔5个波峰的距离，再除以5！)*\n\n"
                 f"2. **换算物理波长 (λ)**：系统通过测量镜面轮廓，算出了当前照片的物理比例尺为 **1 像素 = {mm_per_pixel:.4f} mm**。将上一步的像素距离乘以它，得到实际波长。\n\n"
-                f"3. **计算声速 (v)**：已知超声波探头的发射频率 f = **{frequency_hz} Hz**。利用波速公式 $v = \lambda \\times f$ 即可求出声速。*(⚠️记得把 mm 换算成 m 喔！)*")
+                f"3. **计算声速 (v)**：已知超声波探头的发射频率 f = **{frequency_hz} Hz**。利用波速公式 $v = \lambda \\times f$ 即可求出声速。*(⚠️避坑警告：记得把 mm 换算成 m 喔！)*")
 
     with col_calc:
         st.markdown("**✏️ 填入你的计算结果**")
         student_lambda = st.number_input("你算出的波长 λ (mm)", min_value=0.0, value=0.0, step=0.1, format="%.2f")
         student_v = st.number_input("你算出的声速 v (m/s)", min_value=0.0, value=0.0, step=0.1, format="%.2f")
 
-   with st.expander("👀 算完了吗？点击这里核对系统的精准分析结果！", expanded=False):
+    with st.expander("👀 算完了吗？点击这里核对系统的精准分析结果！", expanded=False):
         st.markdown("系统提取了主线上所有的波峰数据进行了综合平均运算，得到了当前的精准数值：")
         
         res_col1, res_col2 = st.columns(2)
         
-        # 简单差值显示
         delta_lambda = f"差值 {student_lambda - wavelength_mm:.2f} mm" if student_lambda > 0 else None
         delta_v = f"差值 {student_v - sound_speed_m_s:.2f} m/s" if student_v > 0 else None
         
         res_col1.metric("系统实测超声波波长 (λ)", f"{wavelength_mm:.2f} mm", delta=delta_lambda, delta_color="off")
         res_col2.metric("系统推断空气声速 (v)", f"{sound_speed_m_s:.2f} m/s", delta=delta_v, delta_color="off")
         
-        # ================= 新增：智能误差分析与纠错机制 =================
         if student_v > 0:
             st.markdown("### 🎯 你的误差智能分析")
             error_percent = abs(student_v - sound_speed_m_s) / sound_speed_m_s * 100
             
-            # 智能判定逻辑
             if error_percent < 3:
                 st.success(f"🎉 **完美！相对误差仅为 {error_percent:.2f}%！** \n\n你读取的数据非常精准，而且完美避开了单位换算的陷阱，具备了严谨的科学素养！")
             elif student_v > 10000: 
-                # 常见错误：忘了 mm 转 m，数值会放大 1000 倍
                 st.error(f"😱 **相对误差极大！** \n\n你算出来的声速比火箭还要快！仔细看看你的计算过程，是不是**忘记把波长的单位从毫米 (mm) 换算成米 (m)** 就直接跟频率相乘了？回去改一下试试！")
             else:
                 st.warning(f"🤔 **相对误差为 {error_percent:.2f}%。大方向对了，但有一点小偏差哦！** \n\n单位换算应该是对的，但取点可能不够准。**老师支招：**在图2中读取相隔较远（比如第1个和第8个）的红叉的 X 坐标，相减后除以中间包含的波段数，这样能极大减小偶然误差！再去试试看吧！")
