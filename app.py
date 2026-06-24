@@ -244,14 +244,12 @@ if uploaded_file is not None:
             fit_success = False
 
     # ================= 渲染网页图表 =================
-# ================= 渲染网页图表 =================
     st.subheader("📊 核心数据空间提取与拟合")
     
     row1_col1, row1_col2 = st.columns(2)
     row2_col1, row2_col2 = st.columns(2)
 
     with row1_col1:
-        # 【修改点】统一使用网页原生加粗文本作为标题，保证左右字体绝对一致
         st.markdown("**图1: 三线空间采样与波阵面提取**")
         fig1, ax1 = plt.subplots(figsize=(6, 4))
         ax1.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
@@ -260,25 +258,24 @@ if uploaded_file is not None:
         ax1.plot(x_axis, [center_y + offset_val]*len(x_axis), 'g--', alpha=0.3, label='下采样线')
         ax1.scatter(peaks_center, [center_y]*len(peaks_center), c='red', s=15, zorder=5)
         ax1.axis('off')
-        fig1.tight_layout(pad=0) # 【修改点】压缩 Matplotlib 自带的外部多余白边
+        fig1.tight_layout(pad=0)
         st.pyplot(fig1)
-        with st.expander("💡图1在干嘛？"):
+        with st.expander("💡 图1在干嘛？"):
             st.markdown("你看照片上的明暗条纹，那就是超声波！电脑在画面上‘拉’了三条横线，去感受哪里最亮（波腹）。**红点**就是电脑准确抓到的每一个声波波峰的位置。")
 
     with row1_col2:
-        # 【修改点】使用原生文本作为标题，动态嵌入变量
         st.markdown(f"**图2: 测量结果 (波长 λ = {wavelength_mm:.2f} mm, 声速 v = {sound_speed_m_s:.2f} m/s)**")
         fig2 = go.Figure()
         fig2.add_trace(go.Scatter(x=x_axis, y=profile_center, mode='lines', name='灰度剖面', line=dict(color='black', width=1.5)))
         fig2.add_trace(go.Scatter(x=peaks_center, y=peak_intensities, mode='markers', name='提取峰值', marker=dict(color='red', symbol='x', size=8)))
         fig2.update_layout(
             xaxis_title="像素 X 坐标", yaxis_title="光强 (灰度)",
-            margin=dict(l=20, r=20, t=10, b=20), # 【修改点】顶部边距(t)大幅缩小到10，让图表下沉，实现完美水平对齐
+            margin=dict(l=20, r=20, t=10, b=20),
             height=350,
             hovermode="x unified"
         )
         st.plotly_chart(fig2, use_container_width=True)
-        with st.expander("💡图2怎么看？"):
+        with st.expander("💡 图2怎么看？"):
             st.markdown("这是把图1中间那条线的光强变化‘画’成了波浪线。两个红色叉叉之间的距离，在物理上就代表了一个**波长**！利用波长和已知的频率，我们就能算出声音传播的速度了。")
 
     with row2_col1:
@@ -291,9 +288,9 @@ if uploaded_file is not None:
             circle = plt.Circle((source_x, source_y), radius, color='yellow', fill=False, linestyle=':', linewidth=1.5)
             ax3.add_patch(circle)
         ax3.axis('off')
-        fig3.tight_layout(pad=0) # 压缩白边
+        fig3.tight_layout(pad=0)
         st.pyplot(fig3)
-        with st.expander("💡图3的同心圆代表什么？"):
+        with st.expander("💡 图3的同心圆代表什么？"):
             st.markdown("想象一下往水池里扔一颗石子，波纹是一圈圈扩散的。根据图1里上下中三个红点的位置，电脑利用几何知识（三点确定一个圆），像侦探一样**反向推算**出了发射超声波的探头（红星位置）到底藏在画面外面的哪里！")
 
     with row2_col2:
@@ -305,13 +302,14 @@ if uploaded_file is not None:
             fig4.add_trace(go.Scatter(x=r_smooth, y=realistic_decay(r_smooth, *popt), mode='lines', name='综合衰减模型', line=dict(color='red', width=2)))
         fig4.update_layout(
             xaxis_title="距声源径向距离 (像素)", yaxis_title="波峰相对光强",
-            margin=dict(l=20, r=20, t=10, b=20), # 缩小顶部边距对齐左图
+            margin=dict(l=20, r=20, t=10, b=20),
             height=350,
             hovermode="closest"
         )
         st.plotly_chart(fig4, use_container_width=True)
-        with st.expander("💡声音是怎么变弱的？"):
+        with st.expander("💡 声音是怎么变弱的？"):
             st.markdown("常识告诉我们，离得越远，声音越小。图上的蓝点是我们真实测到的声音能量，红线是物理学家通过数学公式算出来的理论衰减曲线。你可以看看，我们实测的数据跟科学家的理论吻合得漂不漂亮！")
+    
     # --- 高阶教学可视化 (3D & FFT) ---
     st.markdown("---")
     st.subheader("🎓 高阶教学可视化：打破维度限制")
@@ -363,14 +361,14 @@ if uploaded_file is not None:
         ax_fft.axvline(center_fft_x, color='white', linestyle='--', alpha=0.3)
         st.pyplot(fig_fft)
 
-# ================= 互动教学：读图计算与结果核对 =================
+    # ================= 互动教学：读图计算与结果核对 =================
     st.markdown("---")
-    st.subheader("🧠 探究挑战：根据图像自己算出声速！")
-    st.markdown("真正的物理学家可不会只看现成的答案。利用上面的**图2**，你能自己算出空气中的声速吗？")
+    st.subheader("🧠 探究挑战：根据图像算出声速")
+    st.markdown("利用上面的**图2**，你能自己算出空气中的声速吗？")
 
     col_guide, col_calc = st.columns([1.2, 1])
 
-   with col_guide:
+    with col_guide:
         st.info(f"**📝 计算指南与已知条件**\n\n"
                 f"1. **求像素距离**：把鼠标悬停在【图2】的波峰（红叉）上，读出相邻两个波峰的 X 坐标并相减，这就是一个波长包含的像素数。*(💡提示：为了减小误差，你可以读取相隔5个波峰的距离，再除以5！)*\n\n"
                 f"2. **换算物理波长 (λ)**：系统通过测量镜面轮廓，算出了当前照片的物理比例尺为 **1 像素 = {mm_per_pixel:.4f} mm**。将上一步的像素距离乘以它，得到实际波长。\n\n"
@@ -381,13 +379,11 @@ if uploaded_file is not None:
         student_lambda = st.number_input("你算出的波长 λ (mm)", min_value=0.0, value=0.0, step=0.1, format="%.2f")
         student_v = st.number_input("你算出的声速 v (m/s)", min_value=0.0, value=0.0, step=0.1, format="%.2f")
 
-    # 用折叠面板将系统的最终答案藏起来，起到“刮刮乐”对答案的效果
     with st.expander("👀 算完了吗？点击这里核对系统的精准分析结果！", expanded=False):
         st.markdown("系统提取了主线上所有的波峰数据进行了综合平均运算，得到了当前的精准数值：")
         
         res_col1, res_col2 = st.columns(2)
         
-        # 利用 Streamlit 的 delta 功能动态显示误差
         delta_lambda = f"与你的误差 {wavelength_mm - student_lambda:.2f} mm" if student_lambda > 0 else None
         delta_v = f"与你的误差 {sound_speed_m_s - student_v:.2f} m/s" if student_v > 0 else None
         
