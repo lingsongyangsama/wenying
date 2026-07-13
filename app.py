@@ -132,6 +132,77 @@ with st.expander("🔬 纹影成像原理与光路仿真 (点击展开/折叠)",
     )
     st.plotly_chart(fig_optics, use_container_width=True, config={'displayModeBar': False})
 
+# ================= 新增：现象观察板块 =================
+st.markdown("---")
+st.header("👀 现象观察")
+st.markdown("通过单镜离轴纹影系统，我们可以清晰地观察到空气折射率的变化，将不可见的“热”与“声”转化为肉眼可见的震撼影像。")
+
+tab_heat, tab_sound, tab_levitation = st.tabs(["🔥 热现象", "🌊 声波反射与干涉", "🛸 声悬浮"])
+
+# --- 1. 热现象 ---
+with tab_heat:
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("**热水上方的热对流**")
+        if os.path.exists("rs.mp4"):
+            st.video("rs.mp4")
+        else:
+            st.info("尚未上传视频: rs.mp4")
+            
+    with col2:
+        st.markdown("**打火机火焰与热气流**")
+        if os.path.exists("hy.mp4"):
+            st.video("hy.mp4")
+        else:
+            st.info("尚未上传视频: hy.mp4")
+
+# --- 2. 声波反射与干涉 ---
+with tab_sound:
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("### 🪞 声波反射")
+        st.markdown("超声波遇到刚性边界时发生反射，入射波与反射波叠加。")
+        if os.path.exists("fs.png"):
+            st.image("fs.png", caption="声波反射静态图", use_column_width=True)
+        else:
+            st.info("尚未上传图片: fs.png")
+            
+        if os.path.exists("fs.mp4"):
+            st.video("fs.mp4")
+        else:
+            st.info("尚未上传视频: fs.mp4")
+            
+    with col2:
+        st.markdown("### 🧬 声波干涉")
+        st.markdown("多个声源或入射波与反射波在空间中相遇，形成稳定的相干条纹。")
+        if os.path.exists("gs.mp4"):
+            st.video("gs.mp4")
+        else:
+            st.info("尚未上传视频: gs.mp4")
+
+# --- 3. 声悬浮 ---
+with tab_levitation:
+    st.markdown("### 🛸 超声波悬浮现象")
+    st.markdown("利用发射端与反射端之间形成的**驻波**，将轻小物体（如泡沫球）精准稳定在声压节点处，成功克服重力实现悬浮。")
+    
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        if os.path.exists("sxf.mp4"):
+            st.video("sxf.mp4")
+        else:
+            st.info("尚未上传视频: sxf.mp4")
+    with col2:
+        if os.path.exists("yg.mp4"):
+            st.video("yg.mp4")
+        else:
+            st.info("尚未上传视频: yg.mp4")
+    with col3:
+        if os.path.exists("lg.mp4"):
+            st.video("lg.mp4")
+        else:
+            st.info("尚未上传视频: lg.mp4")
+
 # ================= 核心物理模型 =================
 def realistic_decay(r, a, alpha, c):
     r_safe = np.maximum(r, 1e-5)
@@ -148,6 +219,7 @@ def calc_circle_center(p1, p2, p3):
     return (cx, cy)
 
 # ================= 文件上传与示例模块 =================
+st.markdown("---")
 st.header("📂 实验数据上传与解析")
 
 if os.path.exists("example.jpg"):
@@ -212,7 +284,8 @@ if uploaded_file is not None:
                 pt_top = (top_match[0], center_y - offset_val)
                 pt_bottom = (bottom_match[0], center_y + offset_val)
                 center = calc_circle_center(pt_top, pt_center, pt_bottom)
-                if center and center[0] > center_y and center[0] < image.shape[1] + 500:
+                # 修复了这里的逻辑判定：X坐标应当与0比较，而不是与Y坐标比较
+                if center and center[0] > 0 and center[0] < image.shape[1] + 500:
                     calculated_centers_x.append(center[0])
                     calculated_centers_y.append(center[1])
                 
