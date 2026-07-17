@@ -12,7 +12,7 @@ from fpdf import FPDF
 
 # ================= 网页基础配置 =================
 st.set_page_config(page_title="超声波物理特征数字分析平台", layout="wide")
-st.title("🌊 超声波干涉与传播空间高级分析系统")
+st.title("超声波干涉与传播空间高级分析系统")
 st.markdown("基于单镜离轴纹影系统与机器视觉，探究超声波的波阵面、声速及能量耗散规律。")
 
 # ================= 字体乱码终极修复 =================
@@ -35,12 +35,12 @@ def load_chinese_font():
 load_chinese_font()
 
 # ================= 侧边栏：参数设置 =================
-st.sidebar.header("⚙️ 实验参数设置")
+st.sidebar.header("实验参数设置")
 real_diameter_mm = st.sidebar.number_input("凹面镜视场真实直径 (mm)", value=203.0, step=1.0)
 frequency_hz = st.sidebar.number_input("超声波发射频率 (Hz)", value=40000.0, step=100.0)
 
 # 高级视觉参数（带通俗说明悬停提示）
-with st.sidebar.expander("🔧 高级视觉参数 (建议默认)"):
+with st.sidebar.expander("高级视觉参数 (建议默认)"):
     threshold_val = st.number_input(
         "视场二值化阈值", min_value=0, max_value=255, value=30, step=1,
         help="【找圆圈用的】调节这个数字，能帮电脑把‘圆形的镜面’从‘黑色的背景’中完整地抠出来。如果系统报错说没找到圆，试着微调一下它。"
@@ -58,7 +58,7 @@ with st.sidebar.expander("🔧 高级视觉参数 (建议默认)"):
 
 # ================= 原理介绍与光路仿真 =================
 st.markdown("---")
-with st.expander("🔬 纹影成像原理与光路仿真 (点击展开/折叠)", expanded=False):
+with st.expander("一、纹影成像原理与光路仿真 (点击展开/折叠)", expanded=False):
     st.markdown("### 为什么能“看见”声波？")
     st.markdown("""
     超声波在空气中传播时，本质上是空气分子的纵向振动，这会导致空间中产生周期性的**疏密变化**。
@@ -134,10 +134,10 @@ with st.expander("🔬 纹影成像原理与光路仿真 (点击展开/折叠)",
 
 # ================= 新增：现象观察板块 =================
 st.markdown("---")
-st.header("👀 现象观察")
+st.header("二、现象观察")
 st.markdown("通过单镜离轴纹影系统，我们可以清晰地观察到空气折射率的变化，将不可见的“热”与“声”转化为肉眼可见的震撼影像。")
 
-tab_heat, tab_sound, tab_levitation = st.tabs(["🔥 热现象", "🌊 声波反射与干涉", "🛸 声悬浮"])
+tab_heat, tab_sound, tab_levitation = st.tabs(["热现象", "声波反射与干涉", "声悬浮"])
 
 # --- 1. 热现象 ---
 with tab_heat:
@@ -161,7 +161,7 @@ with tab_sound:
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("### 🪞 声波反射")
+        st.markdown("### 声波反射")
         st.markdown("超声波遇到刚性边界时发生反射，入射波与反射波叠加。")
         if os.path.exists("fs.png"):
             st.image("fs.png", caption="声波反射静态图", use_column_width=True)
@@ -174,7 +174,7 @@ with tab_sound:
             st.info("尚未上传视频: fs.mp4")
             
     with col2:
-        st.markdown("### 🧬 声波干涉")
+        st.markdown("### 声波干涉")
         st.markdown("多个声源或入射波与反射波在空间中相遇，形成稳定的相干条纹。")
         if os.path.exists("gs.mp4"):
             st.video("gs.mp4")
@@ -183,7 +183,7 @@ with tab_sound:
 
 # --- 3. 声悬浮 ---
 with tab_levitation:
-    st.markdown("### 🛸 超声波悬浮现象")
+    st.markdown("### 超声波悬浮现象")
     st.markdown("利用发射端与反射端之间形成的**驻波**，将轻小物体（如泡沫球）精准稳定在声压节点处，成功克服重力实现悬浮。")
     
     col1, col2, col3 = st.columns(3)
@@ -220,27 +220,27 @@ def calc_circle_center(p1, p2, p3):
 
 # ================= 文件上传与示例模块 =================
 st.markdown("---")
-st.header("📂 实验数据上传与解析")
+st.header("三、单超声波波源实验数据上传与解析")
 
 if os.path.exists("example.jpg"):
     with open("example.jpg", "rb") as file:
         st.download_button(
-            label="📥 点击下载示例纹影图像用于测试",
+            label="📥点击下载示例纹影图像用于测试",
             data=file,
             file_name="example.jpg",
             mime="image/jpeg"
         )
 else:
-    st.info("💡 提示：您可以将上课拍摄的清晰图片重命名为 `example.jpg` 并存放在代码同级目录下，系统会自动在此处生成供学生下载的按钮。")
+    st.info("提示：您可以将上课拍摄的清晰图片重命名为 `example.jpg` 并存放在代码同级目录下，系统会自动在此处生成供学生下载的按钮。")
 
 uploaded_file = st.file_uploader("请在此处上传实验截图 (支持 JPG/PNG)", type=['jpg', 'png', 'jpeg'])
 
 if uploaded_file is not None:
-    with st.spinner("正在进行深度物理特征解析，请稍候..."):
+    with st.spinner("正在进行物理特征解析，请稍候..."):
         file_bytes = np.asarray(bytearray(uploaded_file.read()), dtype=np.uint8)
         image = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
         
-        st.success("图像加载成功！数据计算已完成。")
+        st.success("图像加载成功，数据计算已完成。")
         
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
@@ -317,7 +317,7 @@ if uploaded_file is not None:
             fit_success = False
 
     # ================= 渲染网页图表 =================
-    st.subheader("📊 核心数据空间提取与拟合")
+    st.subheader("数据空间提取与拟合")
     
     row1_col1, row1_col2 = st.columns(2)
     row2_col1, row2_col2 = st.columns(2)
@@ -333,8 +333,8 @@ if uploaded_file is not None:
         ax1.axis('off')
         fig1.tight_layout(pad=0)
         st.pyplot(fig1)
-        with st.expander("💡 图1在干嘛？"):
-            st.markdown("你看照片上的明暗条纹，那就是超声波！电脑在画面上‘拉’了三条横线，去感受哪里最亮（波腹）。**红点**就是电脑准确抓到的每一个声波波峰的位置。")
+        with st.expander("图1代表什么"):
+            st.markdown("我们观察照片上的明暗条纹，那就是超声波，电脑在画面上‘拉’了三条横线，去感受哪里最亮（波腹）。**红点**就是电脑准确抓到的每一个声波波峰的位置。")
 
     with row1_col2:
         st.markdown(f"**图2: 测量结果**")
@@ -348,8 +348,8 @@ if uploaded_file is not None:
             hovermode="x unified"
         )
         st.plotly_chart(fig2, use_container_width=True)
-        with st.expander("💡 图2怎么看？"):
-            st.markdown("这是把图1中间那条线的光强变化‘画’成了波浪线。两个红色叉叉之间的距离，在物理上就代表了一个**波长**！利用波长和已知的频率，我们就能算出声音传播的速度了。")
+        with st.expander("图2代表什么"):
+            st.markdown("这是把图1中间那条线的光强变化‘画’成了波浪线。两个红色叉叉之间的距离，在物理上就代表了一个**波长**。利用波长和已知的频率，我们就能算出声音传播的速度了。")
 
     with row2_col1:
         st.markdown("**图3: 二维同心圆反向声源定位**")
@@ -363,8 +363,8 @@ if uploaded_file is not None:
         ax3.axis('off')
         fig3.tight_layout(pad=0)
         st.pyplot(fig3)
-        with st.expander("💡 图3的同心圆代表什么？"):
-            st.markdown("想象一下往水池里扔一颗石子，波纹是一圈圈扩散的。根据图1里上下中三个红点的位置，电脑利用几何知识（三点确定一个圆），像侦探一样**反向推算**出了发射超声波的探头（红星位置）到底藏在画面外面的哪里！")
+        with st.expander("图3的同心圆代表什么"):
+            st.markdown("我们想象一下往水池里扔一颗石子，波纹是一圈圈扩散的。根据图1里上下中三个红点的位置，电脑利用几何知识（三点确定一个圆），像侦探一样**反向推算**出了发射超声波的探头（红星位置）到底藏在画面外面的哪里")
 
     with row2_col2:
         st.markdown("**图4: 超声波能量衰减物理分析**")
@@ -380,12 +380,12 @@ if uploaded_file is not None:
             hovermode="closest"
         )
         st.plotly_chart(fig4, use_container_width=True)
-        with st.expander("💡 声音是怎么变弱的？"):
-            st.markdown("常识告诉我们，离得越远，声音越小。图上的蓝点是我们真实测到的声音能量，红线是物理学家通过数学公式算出来的理论衰减曲线。你可以看看，我们实测的数据跟科学家的理论吻合得漂不漂亮！")
+        with st.expander("图四代表什么"):
+            st.markdown("常识告诉我们，离得越远，声音越小。图上的蓝点是我们真实测到的声音能量，红线是物理学家通过数学公式算出来的理论衰减曲线。")
     
     # --- 高阶教学可视化 (3D & FFT) ---
     st.markdown("---")
-    st.subheader("🎓 高阶教学可视化：打破维度限制")
+    st.subheader("高阶教学可视化：打破维度限制")
     
     roi_width = int(w * 0.4)
     roi_height = int(w * 0.4)
@@ -399,7 +399,7 @@ if uploaded_file is not None:
 
     with col_3d:
         st.markdown("**教学可视化一：三维超声波声压场地形图**")
-        st.caption("👈 *提示：鼠标按住图表可任意拖拽旋转，滚轮可缩放*")
+        st.caption("*提示：鼠标按住图表可任意拖拽旋转，滚轮可缩放*")
         sub_sample = 4
         roi_sub = roi_gray[::sub_sample, ::sub_sample]
         X = np.arange(0, roi_sub.shape[1])
@@ -436,23 +436,23 @@ if uploaded_file is not None:
 
     # ================= 互动教学：读图计算与结果核对 =================
     st.markdown("---")
-    st.subheader("🧠 探究挑战：根据图像自己算出声速！")
-    st.markdown("利用上面的**图2**，你能自己算出空气中的声速吗？")
+    st.subheader("挑战：根据图像算出声速")
+    st.markdown("利用上面的**图2**，同学们能自己算出空气中的声速吗？")
 
     col_guide, col_calc = st.columns([1.2, 1])
 
     with col_guide:
-        st.info(f"**📝 计算指南与已知条件**\n\n"
-                f"1. **求像素距离**：把鼠标悬停在【图2】的波峰（红叉）上，读出相邻两个波峰的 X 坐标并相减，这就是一个波长包含的像素数。*(💡提示：为了减小误差，你可以读取相隔5个波峰的距离，再除以5！)*\n\n"
+        st.info(f"**计算指南与已知条件**\n\n"
+                f"1. **求像素距离**：把鼠标悬停在【图2】的波峰（红叉）上，读出相邻两个波峰的 X 坐标并相减，这就是一个波长包含的像素数。*(提示：为了减小误差，可以读取相隔5个波峰的距离，再除以5)*\n\n"
                 f"2. **换算物理波长 (λ)**：系统通过测量镜面轮廓，算出了当前照片的物理比例尺为 **1 像素 = {mm_per_pixel:.4f} mm**。将上一步的像素距离乘以它，得到实际波长。\n\n"
-                f"3. **计算声速 (v)**：已知超声波探头的发射频率 f = **{frequency_hz} Hz**。利用波速公式 $v = \lambda \\times f$ 即可求出声速。*(⚠️记得把 mm 换算成 m 喔！)*")
+                f"3. **计算声速 (v)**：已知超声波探头的发射频率 f = **{frequency_hz} Hz**。利用波速公式 $v = \lambda \\times f$ 即可求出声速。*(记得把 mm 换算成 m )*")
 
     with col_calc:
-        st.markdown("**✏️ 填入你的计算结果**")
+        st.markdown("**填入你的计算结果**")
         student_lambda = st.number_input("你算出的波长 λ (mm)", min_value=0.0, value=0.0, step=0.1, format="%.2f")
         student_v = st.number_input("你算出的声速 v (m/s)", min_value=0.0, value=0.0, step=0.1, format="%.2f")
 
-    with st.expander("👀 算完了吗？点击这里核对系统的精准分析结果！", expanded=False):
+    with st.expander("点击这里核对系统的精准分析结果", expanded=False):
         st.markdown("系统提取了主线上所有的波峰数据进行了综合平均运算，得到了当前的精准数值：")
         
         res_col1, res_col2 = st.columns(2)
@@ -468,24 +468,24 @@ if uploaded_file is not None:
         eval_text = "（学生尚未提交自主计算结果进行对比评估）"
         
         if student_v > 0:
-            st.markdown("### 🎯 你的误差智能分析")
+            st.markdown("### 你的误差智能分析")
             error_percent = abs(student_v - sound_speed_m_s) / sound_speed_m_s * 100
             
             if error_percent < 3:
                 eval_text = "你读取的数据非常精准，而且完美避开了单位换算的陷阱，具备了严谨的科学素养！"
-                st.success(f"🎉 **完美！相对误差仅为 {error_percent:.2f}%！** \n\n{eval_text}")
+                st.success(f"**完美！相对误差仅为 {error_percent:.2f}%！** \n\n{eval_text}")
             elif student_v > 10000: 
                 eval_text = "你算出来的声速比火箭还要快！仔细看看你的计算过程，是不是忘记把波长的单位从毫米 (mm) 换算成米 (m) 就直接跟频率相乘了？回去改一下试试！"
-                st.error(f"😱 **相对误差极大！** \n\n{eval_text}")
+                st.error(f"**相对误差极大！** \n\n{eval_text}")
             else:
                 eval_text = "单位换算应该是对的，但取点可能不够准。在图2中读取相隔较远（比如第1个和第8个）的红叉的 X 坐标，相减后除以中间包含的波段数，这样能极大减小偶然误差！"
-                st.warning(f"🤔 **相对误差为 {error_percent:.2f}%。大方向对了，但有一点小偏差哦！** \n\n{eval_text}")
+                st.warning(f"**相对误差为 {error_percent:.2f}%。大方向对了，但有一点小偏差哦！** \n\n{eval_text}")
 
         st.caption("注：系统采用了全像素阵列多点均值技术，因此可能会与你手动选取两点计算的结果有微小差异，这是正常的实验误差。")
         
         # ================= 生成与下载包含全套图表的 PDF 实验报告 =================
         st.markdown("---")
-        st.markdown("### 📄 专属实验报告导出")
+        st.markdown("### 专属实验报告导出")
         st.caption("学生可以一键将当前图像的处理结果（包含完整的4组物理分析图表）、自主测算数据以及系统的智能误差评估打包为标准 PDF 报告。")
         
         # --- 后台将 4 张图表保存为本地图片 ---
@@ -580,7 +580,7 @@ if uploaded_file is not None:
                 os.remove(f)
         
         st.download_button(
-            label="⬇️ 一键生成并下载PDF实验报告",
+            label="一键生成并下载PDF实验报告",
             data=pdf_bytes,
             file_name="超声波测声速_数字分析实验报告.pdf",
             mime="application/pdf"
